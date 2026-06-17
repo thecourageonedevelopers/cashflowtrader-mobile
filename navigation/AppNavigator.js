@@ -16,7 +16,7 @@ export default function AppNavigator() {
         }}
       >
         <Stack.Screen
-          name="AuthService"
+          name="AuthService Test Screen"
           component={AuthService}
         />
       </Stack.Navigator>
