@@ -43,7 +43,12 @@ export default function SignInScreen({ navigation }) {
         >
           <AuthHeader
             rightText="Create account →"
-            onRightPress={() => navigation.navigate("SignUp")}
+            onRightPress={() =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "SignUp" }],
+              })
+            }
             style={styles.header}
           />
 
@@ -67,7 +72,7 @@ export default function SignInScreen({ navigation }) {
             </Text>
 
             <GoogleButton
-              onPress={() => {}}
+              onPress={() => { }}
               style={styles.googleButton}
             />
 
@@ -161,7 +166,7 @@ export default function SignInScreen({ navigation }) {
             </TouchableOpacity>
 
             <PrimaryButton
-              onPress={() => {}}
+              onPress={() => { }}
               labelStyle={{ fontSize: 18 }}
             >
               Sign In →
@@ -172,7 +177,12 @@ export default function SignInScreen({ navigation }) {
               New here?{" "}
               <Text
                 style={authBaseStyles.footerLink}
-                onPress={() => navigation.navigate("SignUp")}
+                onPress={() =>
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: "SignUp" }],
+                  })
+                }
               >
                 Start your journey
               </Text>

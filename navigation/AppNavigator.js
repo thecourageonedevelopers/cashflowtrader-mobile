@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import SignInScreen from "../screens/auth/SignInScreen";
 import SignUpScreen from "../screens/auth/SignUpScreen";
+import AppTabs      from "./AppTabs";
 
 const navTheme = {
   ...DarkTheme,
@@ -17,16 +18,18 @@ const navTheme = {
 };
 
 const Stack = createNativeStackNavigator();
+const DARK_BG = { backgroundColor: "#050505" };
 
 export default function AppNavigator() {
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} style={DARK_BG}>
       <Stack.Navigator
-        initialRouteName="SignIn"
-        screenOptions={{ headerShown: false }}
+        initialRouteName="App"
+        screenOptions={{ headerShown: false, contentStyle: DARK_BG }}
       >
-        <Stack.Screen name="SignIn" component={SignInScreen} />
-        <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen name="SignIn" component={SignInScreen} options={{ contentStyle: DARK_BG }} />
+        <Stack.Screen name="SignUp" component={SignUpScreen} options={{ contentStyle: DARK_BG }} />
+        <Stack.Screen name="App"    component={AppTabs}     options={{ animation: "none", contentStyle: DARK_BG }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

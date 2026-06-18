@@ -42,7 +42,12 @@ export default function SignUpScreen({ navigation }) {
         >
           <AuthHeader
             rightText="Sign In →"
-            onRightPress={() => navigation.navigate("SignIn")}
+             onRightPress={() =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "SignIn" }],
+              })
+            }
             style={styles.header}
             rightTextStyle={styles.rightLink}
           />
@@ -153,7 +158,12 @@ export default function SignUpScreen({ navigation }) {
               Already have an account?{" "}
               <Text
                 style={authBaseStyles.footerLink}
-                onPress={() => navigation.navigate("SignIn")}
+                onPress={() =>
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: "SignIn" }],
+                  })
+                }
               >
                 Sign in
               </Text>
