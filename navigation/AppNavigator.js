@@ -1,24 +1,32 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from "react";
+import { NavigationContainer, DarkTheme } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import AuthService from '../services/AuthService';
+import SignInScreen from "../screens/auth/SignInScreen";
+import SignUpScreen from "../screens/auth/SignUpScreen";
+
+const navTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: "#050505",
+    card: "#0a0a0a",
+    border: "#1b1b1b",
+    primary: "#22c55e",
+  },
+};
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator
-        initialRouteName="AuthService"
-        screenOptions={{
-          headerShown: false,
-        }}
+        initialRouteName="SignIn"
+        screenOptions={{ headerShown: false }}
       >
-        <Stack.Screen
-          name="AuthService Test Screen"
-          component={AuthService}
-        />
+        <Stack.Screen name="SignIn" component={SignInScreen} />
+        <Stack.Screen name="SignUp" component={SignUpScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
