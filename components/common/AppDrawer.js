@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useMemo } from "react";
 import {
   View,
   Text,
@@ -21,81 +21,6 @@ const MENU_ITEMS = [
   { icon: "bar-chart-outline",    label: "Progress",          route: "ProgressScreen"   },
   { icon: "help-circle-outline",  label: "Support",           route: "SupportScreen"    },
 ];
-
-export default function AppDrawer({ currentScreen, onNavigate, onClose }) {
-  return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* ── Drawer header ── */}
-      <View style={styles.header}>
-        <View style={styles.logoRow}>
-          <View style={authBaseStyles.logoBox}>
-            <Text style={authBaseStyles.logoLetter}>C</Text>
-          </View>
-          <Text style={authBaseStyles.brandText}>
-            Cashflow{" "}
-            <Text style={{ color: PRIMARY }}>Trader</Text>
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          onPress={onClose}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="close" size={24} color="#777" />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Profile card ── */}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>SC</Text>
-        </View>
-
-        <View style={styles.profileInfo}>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>TRADER</Text>
-          </View>
-          <Text style={styles.profileName}>Suresh Cashflow</Text>
-          <Text style={styles.profileEmail}>cashflowsuresh@gmail.com</Text>
-        </View>
-      </View>
-
-      {/* ── Navigation items ── */}
-      <ScrollView
-        style={styles.menuScroll}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        {MENU_ITEMS.map((item) => (
-          <DrawerItem
-            key={item.route}
-            icon={item.icon}
-            label={item.label}
-            isActive={currentScreen === item.route}
-            onPress={() => onNavigate(item.route)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* ── Bottom: Profile + Sign Out ── */}
-      <View style={styles.bottomSection}>
-        <View style={styles.separator} />
-        <DrawerItem
-          icon="person-outline"
-          label="My Profile"
-          isActive={currentScreen === "ProfileScreen"}
-          onPress={() => onNavigate("ProfileScreen")}
-        />
-        <DrawerItem
-          icon="log-out-outline"
-          label="Sign Out"
-          isActive={false}
-          onPress={() => onNavigate("SignIn")}
-        />
-      </View>
-    </SafeAreaView>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -199,4 +124,88 @@ const styles = StyleSheet.create({
   bottomSection: {
     paddingBottom: 6,
   },
+});
+
+export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, permanent = false }) {
+  // Stable per-route handlers. Recreated only if onNavigate changes, which
+  // never happens in practice — ScreenLayout wraps it in a stable useCallback.
+  const navHandlers = useMemo(() => {
+    const routes = [...MENU_ITEMS.map((i) => i.route), "ProfileScreen", "SignIn"];
+    return Object.fromEntries(routes.map((r) => [r, () => onNavigate(r)]));
+  }, [onNavigate]);
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      {/* ── Drawer header ── */}
+      <View style={styles.header}>
+        <View style={styles.logoRow}>
+          <View style={authBaseStyles.logoBox}>
+            <Text style={authBaseStyles.logoLetter}>C</Text>
+          </View>
+          <Text style={authBaseStyles.brandText}>
+            Cashflow{" "}
+            <Text style={{ color: PRIMARY }}>Trader</Text>
+          </Text>
+        </View>
+
+        {!permanent && (
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="close" size={24} color="#777" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* ── Profile card ── */}
+      <View style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>SC</Text>
+        </View>
+
+        <View style={styles.profileInfo}>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleText}>TRADER</Text>
+          </View>
+          <Text style={styles.profileName}>Suresh Cashflow</Text>
+          <Text style={styles.profileEmail}>cashflowsuresh@gmail.com</Text>
+        </View>
+      </View>
+
+      {/* ── Navigation items ── */}
+      <ScrollView
+        style={styles.menuScroll}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {MENU_ITEMS.map((item) => (
+          <DrawerItem
+            key={item.route}
+            icon={item.icon}
+            label={item.label}
+            isActive={currentScreen === item.route}
+            onPress={navHandlers[item.route]}
+          />
+        ))}
+      </ScrollView>
+
+      {/* ── Bottom: Profile + Sign Out ── */}
+      <View style={styles.bottomSection}>
+        <View style={styles.separator} />
+        <DrawerItem
+          icon="person-outline"
+          label="My Profile"
+          isActive={currentScreen === "ProfileScreen"}
+          onPress={navHandlers.ProfileScreen}
+        />
+        <DrawerItem
+          icon="log-out-outline"
+          label="Sign Out"
+          isActive={false}
+          onPress={navHandlers.SignIn}
+        />
+      </View>
+    </SafeAreaView>
+  );
 });

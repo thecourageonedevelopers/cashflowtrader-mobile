@@ -1,30 +1,7 @@
-import React from "react";
+import React, { memo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PRIMARY } from "../auth/AuthStyles";
-
-export default function DrawerItem({ icon, label, isActive, onPress }) {
-  return (
-    <TouchableOpacity
-      style={[styles.item, isActive && styles.activeItem]}
-      onPress={onPress}
-      activeOpacity={0.75}
-    >
-      {isActive && <View style={styles.activeBorder} />}
-
-      <Ionicons
-        name={icon}
-        size={20}
-        color={isActive ? PRIMARY : "#888"}
-        style={styles.icon}
-      />
-
-      <Text style={[styles.label, isActive && styles.activeLabel]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-}
 
 const styles = StyleSheet.create({
   item: {
@@ -65,4 +42,27 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
   },
+});
+
+export default memo(function DrawerItem({ icon, label, isActive, onPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.item, isActive && styles.activeItem]}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+      {isActive && <View style={styles.activeBorder} />}
+
+      <Ionicons
+        name={icon}
+        size={20}
+        color={isActive ? PRIMARY : "#888"}
+        style={styles.icon}
+      />
+
+      <Text style={[styles.label, isActive && styles.activeLabel]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 });

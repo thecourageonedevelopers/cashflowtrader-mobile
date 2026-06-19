@@ -43,11 +43,14 @@ export default function SignInScreen({ navigation }) {
         >
           <AuthHeader
             rightText="Create account →"
+            // onRightPress={() =>
+            //   navigation.reset({
+            //     index: 0,
+            //     routes: [{ name: "SignUp" }],
+            //   })
+            // }
             onRightPress={() =>
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "SignUp" }],
-              })
+              navigation.navigate("SignUp")
             }
             style={styles.header}
           />
@@ -178,10 +181,11 @@ export default function SignInScreen({ navigation }) {
               <Text
                 style={authBaseStyles.footerLink}
                 onPress={() =>
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: "SignUp" }],
-                  })
+                  // navigation.reset({
+                  //   index: 0,
+                  //   routes: [{ name: "SignUp" }],
+                  // })
+                   navigation.navigate("SignUp")
                 }
               >
                 Start your journey
