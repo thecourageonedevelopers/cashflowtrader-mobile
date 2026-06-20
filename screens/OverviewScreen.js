@@ -545,13 +545,14 @@ const styles = StyleSheet.create({
   loadingBrand: {
     color: "#fff",
     fontSize: 22,
-    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
     marginBottom: 10,
   },
 
   loadingTagline: {
     color: "#555",
     fontSize: 13,
+    fontFamily: "Inter_400Regular",
     letterSpacing: 0.5,
   },
 
@@ -583,27 +584,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: GLOW_BORDER,
     borderRadius: 24,
-    padding: 24,
+    padding: 20,
   },
 
   heroLeft: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
 
   heroDate: {
     color: "#777",
     fontSize: 11,
-    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
     letterSpacing: 3,
     marginBottom: 10,
   },
 
   heroTitle: {
     color: "#fff",
-    fontSize: 36,
-    fontWeight: "800",
-    lineHeight: 44,
-    marginBottom: 10,
+    fontSize: 30,
+    fontFamily: "Inter_900Black",
+    lineHeight: 38,
+    marginBottom: 8,
   },
 
   heroGreen: {
@@ -612,9 +613,9 @@ const styles = StyleSheet.create({
 
   heroSubtitle: {
     color: "#999",
-    fontSize: 15,
-    fontWeight: "500",
-    lineHeight: 22,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
   },
 
   heroActions: {
@@ -627,15 +628,15 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 14,
   },
 
   primaryButtonText: {
     color: "#000",
-    fontWeight: "800",
-    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
     letterSpacing: 0.2,
     marginLeft: 8,
   },
@@ -646,16 +647,16 @@ const styles = StyleSheet.create({
     borderColor: "#222",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 14,
   },
 
   secondaryButtonText: {
     color: "#fff",
     marginLeft: 8,
-    fontWeight: "600",
-    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
   },
 
   // ── Stats grid ─────────────────────────────────────────────────────────────
@@ -672,13 +673,13 @@ const styles = StyleSheet.create({
 
   statCard: {
     width: "48%",           // exactly 2 per row on mobile (was flex: 1)
-    minHeight: 150,
+    minHeight: 128,
     backgroundColor: "#0d0d0d",
     borderWidth: 1,
     borderColor: "#1c1c1c",
     borderTopColor: HIGHLIGHT_TOP,
     borderRadius: 20,
-    padding: 18,
+    padding: 14,
   },
 
   statCardDesktop: {
@@ -688,9 +689,9 @@ const styles = StyleSheet.create({
   cardLabel: {
     color: "#aaa",
     fontSize: 10,
-    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
     letterSpacing: 2,
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   statValueRow: {
@@ -699,13 +700,14 @@ const styles = StyleSheet.create({
   },
 
   statValue: {
-    fontSize: 28,           // reduced from 34 to fit cleanly in 2-col cards
-    fontWeight: "800",
+    fontSize: 24,
+    fontFamily: "Inter_800ExtraBold",
   },
 
   statSuffix: {
     color: "#999",
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
     marginLeft: 4,
     marginBottom: 4,
   },
@@ -713,15 +715,16 @@ const styles = StyleSheet.create({
   statSubText: {
     color: "#888",
     fontSize: 12,
-    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.3,
-    marginTop: 8,
-    marginBottom: 14,
+    marginTop: 6,
+    marginBottom: 10,
   },
 
   cardFooter: {
     color: "#888",
     fontSize: 12,
+    fontFamily: "Inter_400Regular",
     lineHeight: 18,
     marginTop: "auto",
   },
@@ -747,7 +750,7 @@ const styles = StyleSheet.create({
     borderColor: "#1c1c1c",
     borderTopColor: HIGHLIGHT_TOP,
     borderRadius: 20,
-    padding: 20,
+    padding: 16,
     gap: 16,
     marginBottom: 22,
   },
@@ -769,7 +772,7 @@ const styles = StyleSheet.create({
     color: PRIMARY,
     marginLeft: 6,
     fontSize: 10,
-    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
     letterSpacing: 2,
   },
 
@@ -777,15 +780,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 3,
     backgroundColor: PRIMARY,
-    marginVertical: 18,
+    marginVertical: 14,
     borderRadius: 999,
   },
 
   identityName: {
     color: "#fff",
-    fontSize: 26,
-    fontWeight: "800",
-    marginBottom: 14,
+    fontSize: 22,
+    fontFamily: "Inter_800ExtraBold",
+    marginBottom: 10,
   },
 
   roleBadge: {
@@ -793,23 +796,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     backgroundColor: "#111",
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "#222",
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   roleBadgeText: {
     color: PRIMARY,
     fontSize: 12,
-    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
     marginLeft: 6,
   },
 
   identityQuote: {
     color: "#999",
+    fontFamily: "Inter_400Regular",
     lineHeight: 24,
   },
 
@@ -834,7 +838,7 @@ const styles = StyleSheet.create({
     borderColor: GLOW_BORDER,
     borderTopColor: HIGHLIGHT_TOP,
     borderRadius: 20,
-    padding: 18,
+    padding: 14,
   },
 
   goalTop: {
@@ -844,15 +848,15 @@ const styles = StyleSheet.create({
 
   goalPercent: {
     color: PRIMARY,
-    fontWeight: "800",
-    fontSize: 18,
+    fontFamily: "Inter_800ExtraBold",
+    fontSize: 15,
   },
 
   goalValue: {
     color: "#fff",
-    fontSize: 22,
-    fontWeight: "800",
-    marginVertical: 10,
+    fontSize: 18,
+    fontFamily: "Inter_800ExtraBold",
+    marginVertical: 8,
   },
 
   doubleCards: {
@@ -870,7 +874,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1c1c1c",
     borderTopColor: HIGHLIGHT_TOP,
-    padding: 18,
+    padding: 14,
   },
 
   weaknessCard: {
@@ -880,19 +884,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1c1c1c",
     borderTopColor: HIGHLIGHT_TOP,
-    padding: 18,
+    padding: 14,
   },
 
   strengthText: {
     color: PRIMARY,
-    fontWeight: "700",
-    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
   },
 
   weaknessText: {
     color: "#ff8d8d",
-    fontWeight: "700",
-    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
   },
 
   infoCard: {
@@ -902,13 +906,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1c1c1c",
     borderTopColor: HIGHLIGHT_TOP,
-    padding: 18,
+    padding: 14,
   },
 
   infoValue: {
     color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
   },
 
   // ── Bottom grid ────────────────────────────────────────────────────────────
@@ -928,7 +932,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1c1c1c",
     borderTopColor: HIGHLIGHT_TOP,
-    padding: 20,
+    padding: 16,
   },
 
   liveCard: {
@@ -938,7 +942,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1c1c1c",
     borderTopColor: HIGHLIGHT_TOP,
-    padding: 20,
+    padding: 16,
   },
 
   sectionHeader: {
@@ -956,34 +960,35 @@ const styles = StyleSheet.create({
     color: PRIMARY,
     marginLeft: 6,
     fontSize: 10,
-    fontWeight: "800",
+    fontFamily: "Inter_700Bold",
     letterSpacing: 2,
   },
 
   sectionTitle: {
     color: "#fff",
-    fontSize: 22,
-    fontWeight: "800",
-    lineHeight: 28,
-    marginTop: 14,
-    marginBottom: 8,
+    fontSize: 18,
+    fontFamily: "Inter_800ExtraBold",
+    lineHeight: 24,
+    marginTop: 10,
+    marginBottom: 6,
   },
 
   sectionSubTitle: {
     color: "#888",
-    marginBottom: 20,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 14,
   },
 
   daysGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
 
   dayBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: "#111",
     borderWidth: 1,
     borderColor: "#222",
@@ -993,11 +998,17 @@ const styles = StyleSheet.create({
 
   dayBoxActive: {
     backgroundColor: PRIMARY,
+    borderColor: "rgba(57, 255, 20, 0.55)",
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 6,
   },
 
   dayText: {
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
   },
 
   dayTextActive: {
@@ -1008,7 +1019,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#181818",
   },
@@ -1028,10 +1039,11 @@ const styles = StyleSheet.create({
 
   sessionText: {
     color: "#fff",
-    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
   },
 
   sessionTime: {
     color: "#888",
+    fontFamily: "Inter_400Regular",
   },
 });
