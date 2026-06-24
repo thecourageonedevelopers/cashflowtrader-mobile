@@ -10,17 +10,24 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { PRIMARY, authBaseStyles } from "../auth/AuthStyles";
 import DrawerItem from "./DrawerItem";
+import { useAuth } from "../../src/context/AuthContext";
 
 const MENU_ITEMS = [
-  { icon: "home-outline",         label: "Overview",          route: "OverviewScreen"   },
-  { icon: "trophy-outline",       label: "21-Day Challenge",  route: "ChallengeScreen"  },
-  { icon: "people-outline",       label: "Private Community", route: "CommunityScreen"  },
-  { icon: "trending-up-outline",  label: "Live Market",       route: "MarketScreen"     },
-  { icon: "journal-outline",      label: "Trading Journal",   route: "JournalScreen"    },
-  { icon: "videocam-outline",     label: "Live Sessions",     route: "SessionsScreen"   },
-  { icon: "bar-chart-outline",    label: "Progress",          route: "ProgressScreen"   },
-  { icon: "help-circle-outline",  label: "Support",           route: "SupportScreen"    },
+  { icon: "home-outline",         label: "Overview",          route: "OverviewScreen"      },
+  { icon: "trophy-outline",       label: "21-Day Challenge",  route: "ChallengeScreen"     },
+  // { icon: "trending-up-outline",  label: "Live Trading",      route: "LiveTradingScreen"   },
+  { icon: "scan-outline",         label: "Trading AI",        route: "JournalScreen"       },
+  { icon: "videocam-outline",     label: "Live Sessions",     route: "SessionsScreen"      },
+  { icon: "bar-chart-outline",    label: "Progress",          route: "ProgressScreen"      },
+  { icon: "help-circle-outline",  label: "Support",           route: "SupportScreen"       },
 ];
+
+function getInitials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -109,9 +116,34 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
+  challengeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+  },
+
+  challengeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: PRIMARY,
+    marginRight: 5,
+  },
+
+  challengeText: {
+    color: PRIMARY,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+
   menuScroll: {
     flex: 1,
     paddingTop: 4,
+  },
+
+  adminSpacer: {
+    height: 8,
   },
 
   separator: {
@@ -127,10 +159,17 @@ const styles = StyleSheet.create({
 });
 
 export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, permanent = false }) {
-  // Stable per-route handlers. Recreated only if onNavigate changes, which
-  // never happens in practice — ScreenLayout wraps it in a stable useCallback.
+  const { user, isAdmin, hasChallengeAccess, logout } = useAuth();
+
+  const avatarInitials = useMemo(() => getInitials(user?.name), [user?.name]);
+
   const navHandlers = useMemo(() => {
-    const routes = [...MENU_ITEMS.map((i) => i.route), "ProfileScreen", "SignIn"];
+    const routes = [
+      ...MENU_ITEMS.map((i) => i.route),
+      "ProfileScreen",
+      "AdminScreen",
+      "SignIn",
+    ];
     return Object.fromEntries(routes.map((r) => [r, () => onNavigate(r)]));
   }, [onNavigate]);
 
@@ -161,15 +200,25 @@ export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, per
       {/* ── Profile card ── */}
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>SC</Text>
+          <Text style={styles.avatarText}>{avatarInitials}</Text>
         </View>
 
         <View style={styles.profileInfo}>
           <View style={styles.roleBadge}>
             <Text style={styles.roleText}>TRADER</Text>
           </View>
-          <Text style={styles.profileName}>Suresh Cashflow</Text>
-          <Text style={styles.profileEmail}>cashflowsuresh@gmail.com</Text>
+          <Text style={styles.profileName} numberOfLines={1}>
+            {user?.name || "Trader"}
+          </Text>
+          <Text style={styles.profileEmail} numberOfLines={1}>
+            {user?.email || ""}
+          </Text>
+          {hasChallengeAccess && (
+            <View style={styles.challengeBadge}>
+              <View style={styles.challengeDot} />
+              <Text style={styles.challengeText}>CHALLENGE ACTIVE</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -188,6 +237,18 @@ export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, per
             onPress={navHandlers[item.route]}
           />
         ))}
+
+        {isAdmin && (
+          <>
+            <View style={styles.adminSpacer} />
+            <DrawerItem
+              icon="shield-checkmark-outline"
+              label="Admin OS"
+              isActive={currentScreen === "AdminScreen"}
+              onPress={navHandlers.AdminScreen}
+            />
+          </>
+        )}
       </ScrollView>
 
       {/* ── Bottom: Profile + Sign Out ── */}
@@ -203,7 +264,7 @@ export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, per
           icon="log-out-outline"
           label="Sign Out"
           isActive={false}
-          onPress={navHandlers.SignIn}
+          onPress={logout}
         />
       </View>
     </SafeAreaView>

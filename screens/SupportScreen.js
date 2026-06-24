@@ -9,169 +9,141 @@ import {
   StyleSheet,
   Platform,
   useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import ScreenLayout from "../components/common/ScreenLayout";
 import { PRIMARY } from "../components/auth/AuthStyles";
+import { useAuth } from "../src/hooks/useAuth";
+import { supportApi } from "../src/api/support";
+import { extractApiError } from "../src/utils/apiError";
+import { useAlert } from "../src/context/AlertContext";
 
 const supportOptions = [
   {
     id: 1,
+    key: "support_call",
     title: "Request Support Call",
-    description:
-      "Talk to our team for help with the platform.",
+    description: "Talk to our team for help with the platform.",
     icon: "call-outline",
   },
   {
     id: 2,
+    key: "mentorship",
     title: "Request Mentorship Consultation",
-    description:
-      "Book time with a senior mentor.",
+    description: "Book time with a senior mentor.",
     icon: "people-outline",
   },
   {
     id: 3,
+    key: "account_opening",
     title: "Account Opening Assistance",
-    description:
-      "Set up your broker / trading account.",
+    description: "Set up your broker / trading account.",
     icon: "briefcase-outline",
   },
   {
     id: 4,
+    key: "one_on_one",
     title: "Book One-On-One Session",
-    description:
-      "Personalized 60-min session.",
+    description: "Personalized 60-min session.",
     icon: "calendar-outline",
   },
 ];
 
 export default function SupportScreen({ navigation }) {
+  const { showAlert } = useAlert();
   const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 768;
 
-  const isDesktop =
-    Platform.OS === "web" && width >= 768;
+  const { user } = useAuth();
 
-  const [modalVisible, setModalVisible] =
-    useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [fullName, setFullName] = useState(user?.name ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [mobile, setMobile] = useState(user?.mobile ?? "");
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const [selectedTitle, setSelectedTitle] =
-    useState("");
-
-  const [fullName, setFullName] =
-    useState("Cashflow Admin");
-
-  const [email, setEmail] =
-    useState("admin@cashflow.university");
-
-  const [mobile, setMobile] =
-    useState("+91 9876543210");
-
-  const [reason, setReason] =
-    useState("");
-
-  const openRequestModal = (title) => {
-    setSelectedTitle(title);
+  const openRequestModal = (item) => {
+    setSelectedOption(item);
     setModalVisible(true);
   };
 
   const closeModal = () => {
+    if (submitting) return;
     setModalVisible(false);
+    setReason("");
   };
 
-  const handleSubmit = () => {
-    console.log({
-      requestType: selectedTitle,
-      fullName,
-      email,
-      mobile,
-      reason,
-    });
-
-    setModalVisible(false);
+  const handleSubmit = async () => {
+    if (!fullName.trim() || !email.trim() || !reason.trim()) {
+      showAlert({ type: "warning", title: "Required Fields", message: "Please fill in all fields." });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await supportApi.submit({
+        name: fullName.trim(),
+        email: email.trim(),
+        mobile: mobile.trim(),
+        reason: reason.trim(),
+        request_type: selectedOption.key,
+      });
+      showAlert({ type: "success", title: "Request Sent", message: "Our team will reach out to you shortly.", onConfirm: () => { setModalVisible(false); setReason(""); } });
+    } catch (e) {
+      showAlert({ type: "error", title: "Submission Failed", message: extractApiError(e) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <ScreenLayout
-      screenName="SupportScreen"
-      navigation={navigation}
-    >
+    <ScreenLayout screenName="SupportScreen" navigation={navigation}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={
-          styles.contentContainer
-        }
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
         {/* HERO */}
-
         <View style={styles.heroSection}>
           <View style={styles.heroBadge}>
-            <Ionicons
-              name="headset-outline"
-              size={12}
-              color={PRIMARY}
-            />
-
-            <Text style={styles.heroBadgeText}>
-              SUPPORT
-            </Text>
+            <Ionicons name="headset-outline" size={12} color={PRIMARY} />
+            <Text style={styles.heroBadgeText}>SUPPORT</Text>
           </View>
 
           <Text style={styles.heroTitle}>
             We respond when{" "}
-            <Text style={styles.heroGreen}>
-              you ask.
-            </Text>
+            <Text style={styles.heroGreen}>you ask.</Text>
           </Text>
 
           <Text style={styles.heroSubtitle}>
-            Pick what you need.
-            We'll be in touch.
+            Pick what you need.{"\n"}We'll be in touch.
           </Text>
         </View>
 
         {/* SUPPORT CARDS */}
-
-        <View
-          style={[
-            styles.cardGrid,
-            isDesktop &&
-              styles.cardGridDesktop,
-          ]}
-        >
+        <View style={[styles.cardGrid, isDesktop && styles.cardGridDesktop]}>
           {supportOptions.map((item) => (
             <TouchableOpacity
               key={item.id}
               activeOpacity={0.9}
               style={styles.supportCard}
-              onPress={() =>
-                openRequestModal(item.title)
-              }
+              onPress={() => openRequestModal(item)}
             >
               <View style={styles.iconBox}>
-                <Ionicons
-                  name={item.icon}
-                  size={24}
-                  color={PRIMARY}
-                />
+                <Ionicons name={item.icon} size={24} color={PRIMARY} />
               </View>
 
-              <Text style={styles.cardTitle}>
-                {item.title}
-              </Text>
-
-              <Text
-                style={styles.cardDescription}
-              >
-                {item.description}
-              </Text>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardDescription}>{item.description}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* MODAL STARTS HERE */}
-                <Modal
+        {/* MODAL */}
+        <Modal
           visible={modalVisible}
           transparent
           animationType="fade"
@@ -180,68 +152,44 @@ export default function SupportScreen({ navigation }) {
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
               {/* HEADER */}
-
               <View style={styles.modalHeader}>
                 <View style={styles.modalBadge}>
-                  <Text
-                    style={
-                      styles.modalBadgeText
-                    }
-                  >
-                    SUPPORT REQUEST
-                  </Text>
+                  <Text style={styles.modalBadgeText}>SUPPORT REQUEST</Text>
                 </View>
 
-                <TouchableOpacity
-                  onPress={closeModal}
-                >
-                  <Ionicons
-                    name="close"
-                    size={22}
-                    color="#777"
-                  />
+                <TouchableOpacity onPress={closeModal} disabled={submitting}>
+                  <Ionicons name="close" size={22} color="#777" />
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.modalTitle}>
-                {selectedTitle}
-              </Text>
+              <Text style={styles.modalTitle}>{selectedOption?.title}</Text>
 
               {/* FULL NAME */}
-
-              <Text style={styles.inputLabel}>
-                FULL NAME
-              </Text>
-
+              <Text style={styles.inputLabel}>FULL NAME</Text>
               <TextInput
                 value={fullName}
                 onChangeText={setFullName}
                 placeholder="Enter full name"
                 placeholderTextColor="#555"
                 style={styles.input}
+                editable={!submitting}
               />
 
               {/* EMAIL */}
-
-              <Text style={styles.inputLabel}>
-                EMAIL
-              </Text>
-
+              <Text style={styles.inputLabel}>EMAIL</Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
                 placeholder="Enter email"
                 placeholderTextColor="#555"
                 keyboardType="email-address"
+                autoCapitalize="none"
                 style={styles.input}
+                editable={!submitting}
               />
 
               {/* MOBILE */}
-
-              <Text style={styles.inputLabel}>
-                MOBILE
-              </Text>
-
+              <Text style={styles.inputLabel}>MOBILE</Text>
               <TextInput
                 value={mobile}
                 onChangeText={setMobile}
@@ -249,14 +197,11 @@ export default function SupportScreen({ navigation }) {
                 placeholderTextColor="#555"
                 keyboardType="phone-pad"
                 style={styles.input}
+                editable={!submitting}
               />
 
               {/* REASON */}
-
-              <Text style={styles.inputLabel}>
-                REASON
-              </Text>
-
+              <Text style={styles.inputLabel}>REASON</Text>
               <TextInput
                 value={reason}
                 onChangeText={setReason}
@@ -265,27 +210,25 @@ export default function SupportScreen({ navigation }) {
                 multiline
                 textAlignVertical="top"
                 style={styles.textArea}
+                editable={!submitting}
               />
 
               {/* SUBMIT */}
-
               <TouchableOpacity
                 activeOpacity={0.9}
-                style={styles.submitButton}
+                style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
+                disabled={submitting}
               >
-                <Text
-                  style={
-                    styles.submitButtonText
-                  }
-                >
-                  Submit Request
-                </Text>
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Submit Request</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
-
       </ScrollView>
     </ScreenLayout>
   );
@@ -305,7 +248,7 @@ const styles = StyleSheet.create({
   /* HERO */
 
   heroSection: {
-    marginBottom: 28,
+    marginBottom: 18,
   },
 
   heroBadge: {
@@ -313,12 +256,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.25)",
     backgroundColor: "rgba(57,255,20,0.05)",
-    marginBottom: 16,
+    marginBottom: 14,
   },
 
   heroBadgeText: {
@@ -331,9 +274,9 @@ const styles = StyleSheet.create({
 
   heroTitle: {
     color: "#fff",
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "900",
-    marginBottom: 10,
+    marginBottom: 8,
   },
 
   heroGreen: {
@@ -342,14 +285,14 @@ const styles = StyleSheet.create({
 
   heroSubtitle: {
     color: "#a0a0a0",
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   /* CARD GRID */
 
   cardGrid: {
-    gap: 16,
+    gap: 12,
   },
 
   cardGridDesktop: {
@@ -362,9 +305,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#0a0a0a",
     borderWidth: 1,
     borderColor: "#1c1c1c",
-    borderRadius: 18,
-    padding: 20,
-    minHeight: 140,
+    borderRadius: 14,
+    padding: 14,
+    minHeight: 100,
     justifyContent: "center",
     shadowColor: PRIMARY,
     shadowOpacity: 0.08,
@@ -372,28 +315,28 @@ const styles = StyleSheet.create({
   },
 
   iconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     backgroundColor: "rgba(57,255,20,0.08)",
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.2)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 12,
   },
 
   cardTitle: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: 15,
     fontWeight: "700",
-    marginBottom: 8,
+    marginBottom: 6,
   },
 
   cardDescription: {
     color: "#888",
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   /* MODAL */
@@ -410,22 +353,22 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 520,
     backgroundColor: "#050505",
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "#222",
-    padding: 24,
+    padding: 18,
   },
 
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 14,
   },
 
   modalBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.25)",
@@ -441,9 +384,9 @@ const styles = StyleSheet.create({
 
   modalTitle: {
     color: "#fff",
-    fontSize: 30,
+    fontSize: 20,
     fontWeight: "800",
-    marginBottom: 22,
+    marginBottom: 16,
   },
 
   /* INPUTS */
@@ -453,23 +396,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 2,
-    marginBottom: 8,
-    marginTop: 12,
+    marginBottom: 6,
+    marginTop: 10,
   },
 
   input: {
-    height: 54,
+    height: 44,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#1e1e1e",
     backgroundColor: "#080808",
     color: "#fff",
     paddingHorizontal: 14,
-    fontSize: 15,
+    fontSize: 14,
   },
 
   textArea: {
-    minHeight: 120,
+    minHeight: 96,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#1e1e1e",
@@ -477,23 +420,27 @@ const styles = StyleSheet.create({
     color: "#fff",
     paddingHorizontal: 14,
     paddingTop: 14,
-    fontSize: 15,
-    marginBottom: 22,
+    fontSize: 14,
+    marginBottom: 16,
   },
 
   /* BUTTON */
 
   submitButton: {
-    height: 58,
+    height: 48,
     borderRadius: 12,
     backgroundColor: PRIMARY,
     justifyContent: "center",
     alignItems: "center",
   },
 
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+
   submitButtonText: {
     color: "#000",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "800",
   },
 });

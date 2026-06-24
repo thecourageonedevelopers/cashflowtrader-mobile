@@ -18,6 +18,8 @@ import AuthCard from "../../components/auth/AuthCard";
 import GoogleButton from "../../components/auth/GoogleButton";
 import AuthDivider from "../../components/auth/AuthDivider";
 import PrimaryButton from "../../components/auth/PrimaryButton";
+import { useAuth } from "../../src/hooks/useAuth";
+import { extractApiError } from "../../src/utils/apiError";
 
 export default function SignUpScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -28,6 +30,32 @@ export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const { register } = useAuth();
+
+  const handleSignUp = async () => {
+    if (!fullName.trim() || !email.trim() || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      await register(fullName.trim(), email.trim(), password);
+      // Navigation is automatic — RootNavigator switches to AppStack when
+      // AuthContext.user becomes non-null after a successful registration.
+    } catch (e) {
+      setError(extractApiError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -42,7 +70,7 @@ export default function SignUpScreen({ navigation }) {
         >
           <AuthHeader
             rightText="Sign In →"
-             onRightPress={() =>
+            onRightPress={() =>
               navigation.reset({
                 index: 0,
                 routes: [{ name: "SignIn" }],
@@ -88,7 +116,7 @@ export default function SignUpScreen({ navigation }) {
             <TextInput
               mode="outlined"
               value={fullName}
-              onChangeText={setFullName}
+              onChangeText={(v) => { setFullName(v); setError(""); }}
               placeholder="Arjun Mehra"
               placeholderTextColor="#555"
               style={styles.input}
@@ -104,11 +132,12 @@ export default function SignUpScreen({ navigation }) {
             <TextInput
               mode="outlined"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(v) => { setEmail(v); setError(""); }}
               placeholder="you@trader.com"
               placeholderTextColor="#555"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               style={styles.input}
               textColor="#ffffff"
               outlineColor="#222"
@@ -122,7 +151,7 @@ export default function SignUpScreen({ navigation }) {
             <TextInput
               mode="outlined"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(v) => { setPassword(v); setError(""); }}
               secureTextEntry={!showPassword}
               placeholder="Min 6 characters"
               placeholderTextColor="#555"
@@ -146,12 +175,19 @@ export default function SignUpScreen({ navigation }) {
             />
 
             <PrimaryButton
-              onPress={() => {}}
+              onPress={handleSignUp}
+              loading={loading}
+              disabled={loading}
               style={styles.createButton}
               labelStyle={{ fontSize: 17 }}
             >
               Create Account →
             </PrimaryButton>
+
+            {/* API error */}
+            {!!error && (
+              <Text style={styles.errorText}>{error}</Text>
+            )}
 
             {/* Footer */}
             <Text style={[authBaseStyles.footerText, styles.footerText]}>
@@ -261,6 +297,13 @@ const styles = StyleSheet.create({
 
   createButton: {
     marginTop: 18,
+  },
+
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 12,
   },
 
   footerText: {

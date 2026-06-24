@@ -19,6 +19,8 @@ import AuthCard from "../../components/auth/AuthCard";
 import GoogleButton from "../../components/auth/GoogleButton";
 import AuthDivider from "../../components/auth/AuthDivider";
 import PrimaryButton from "../../components/auth/PrimaryButton";
+import { useAuth } from "../../src/hooks/useAuth";
+import { extractApiError } from "../../src/utils/apiError";
 
 export default function SignInScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -26,9 +28,31 @@ export default function SignInScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const { login } = useAuth();
   const { width } = useWindowDimensions();
 
   const cardWidth = width > 768 ? 420 : width - 32;
+
+  const handleSignIn = async () => {
+    if (!email.trim() || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      await login(email.trim(), password);
+      // Navigation is automatic — RootNavigator switches to AppStack when
+      // AuthContext.user becomes non-null after a successful login.
+    } catch (e) {
+      setError(extractApiError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -43,15 +67,7 @@ export default function SignInScreen({ navigation }) {
         >
           <AuthHeader
             rightText="Create account →"
-            // onRightPress={() =>
-            //   navigation.reset({
-            //     index: 0,
-            //     routes: [{ name: "SignUp" }],
-            //   })
-            // }
-            onRightPress={() =>
-              navigation.navigate("SignUp")
-            }
+            onRightPress={() => navigation.navigate("SignUp")}
             style={styles.header}
           />
 
@@ -90,13 +106,14 @@ export default function SignInScreen({ navigation }) {
             <TextInput
               mode="outlined"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(v) => { setEmail(v); setError(""); }}
               placeholder="you@trader.com"
               placeholderTextColor={emailFocused ? "#666" : "#555"}
               onFocus={() => setEmailFocused(true)}
               onBlur={() => setEmailFocused(false)}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               style={[
                 styles.input,
                 { backgroundColor: emailFocused ? "#ffffff" : "#080808" },
@@ -124,7 +141,7 @@ export default function SignInScreen({ navigation }) {
             <TextInput
               mode="outlined"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(v) => { setPassword(v); setError(""); }}
               secureTextEntry={!showPassword}
               placeholder="••••••••"
               placeholderTextColor={passwordFocused ? "#666" : "#555"}
@@ -169,24 +186,25 @@ export default function SignInScreen({ navigation }) {
             </TouchableOpacity>
 
             <PrimaryButton
-              onPress={() => { }}
+              onPress={handleSignIn}
+              loading={loading}
+              disabled={loading}
               labelStyle={{ fontSize: 18 }}
             >
               Sign In →
             </PrimaryButton>
+
+            {/* API error */}
+            {!!error && (
+              <Text style={styles.errorText}>{error}</Text>
+            )}
 
             {/* Footer */}
             <Text style={[authBaseStyles.footerText, styles.footerText]}>
               New here?{" "}
               <Text
                 style={authBaseStyles.footerLink}
-                onPress={() =>
-                  // navigation.reset({
-                  //   index: 0,
-                  //   routes: [{ name: "SignUp" }],
-                  // })
-                   navigation.navigate("SignUp")
-                }
+                onPress={() => navigation.navigate("SignUp")}
               >
                 Start your journey
               </Text>
@@ -287,6 +305,13 @@ const styles = StyleSheet.create({
   forgotText: {
     color: PRIMARY,
     fontSize: 13,
+  },
+
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 12,
   },
 
   footerText: {

@@ -1,6 +1,8 @@
 import React from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider, MD3DarkTheme } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import {
   Inter_400Regular,
@@ -9,7 +11,11 @@ import {
   Inter_800ExtraBold,
   Inter_900Black,
 } from "@expo-google-fonts/inter";
-import AppNavigator from "./navigation/AppNavigator";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./src/api/queryClient";
+import { AuthProvider } from "./src/context/AuthContext";
+import { AlertProvider } from "./src/context/AlertContext";
+import RootNavigator from "./src/navigation";
 
 const paperTheme = {
   ...MD3DarkTheme,
@@ -36,10 +42,21 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaProvider>
-      <PaperProvider theme={paperTheme}>
-        <AppNavigator />
-      </PaperProvider>
-    </SafeAreaProvider>
+    // GestureHandlerRootView is required at the root for react-native-gesture-handler
+    // and @gorhom/bottom-sheet (used in future screens).
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <PaperProvider theme={paperTheme}>
+            <AuthProvider>
+              <AlertProvider>
+                <StatusBar style="light" backgroundColor="#050505" />
+                <RootNavigator />
+              </AlertProvider>
+            </AuthProvider>
+          </PaperProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

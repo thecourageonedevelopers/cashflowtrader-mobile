@@ -4,7 +4,7 @@ import ScreenLayout from "../components/common/ScreenLayout";
 
 export default function MarketScreen({ navigation }) {
   return (
-    <ScreenLayout screenName="MarketScreen" navigation={navigation}>
+    <ScreenLayout screenName="LiveTradingScreen" navigation={navigation}>
       <View style={styles.container}>
         <Text style={styles.title}>Live Market Screen</Text>
       </View>

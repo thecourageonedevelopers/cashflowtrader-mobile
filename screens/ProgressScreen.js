@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,272 +6,261 @@ import {
   StyleSheet,
   Platform,
   useWindowDimensions,
+  ActivityIndicator,
+  TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 
 import ScreenLayout from "../components/common/ScreenLayout";
 import { PRIMARY } from "../components/auth/AuthStyles";
+import { useAuth } from "../src/hooks/useAuth";
+import { progressApi } from "../src/api/progress";
+import { challengeApi } from "../src/api/challenge";
+import { formatDate } from "../src/utils/format";
 
-const scoreItems = [
-  {
-    title: "Journaling",
-    description:
-      "Document each trade. Even setups you skip.",
-    score: "+16",
-    progress: 20,
-  },
-  {
-    title: "Challenge Days",
-    description:
-      "Complete one lesson per day. Compound the routine.",
-    score: "+9",
-    progress: 18,
-  },
-  {
-    title: "Days Active",
-    description:
-      "Show up daily. Even 10 minutes counts.",
-    score: "+4",
-    progress: 12,
-  },
-  {
-    title: "Streak",
-    description:
-      "Don't break the chain. Streaks compound discipline.",
-    score: "+0",
-    progress: 0,
-  },
-];
-
-const timelineItems = [
-  {
-    title: "Joined the platform",
-    description:
-      "The decision to become a better trader.",
-    date: "JUN 14, 2026",
-    completed: true,
-  },
-  {
-    title: "First Journal Entry",
-    description:
-      "The day documentation became a habit.",
-    date: "JUN 15, 2026",
-    completed: true,
-  },
-  {
-    title: "First Live Session",
-    description:
-      "Joined the process. Stopped trading alone.",
-    date: "PENDING",
-    completed: false,
-  },
-  {
-    title: "First Challenge Day Completed",
-    description:
-      "Discipline started compounding.",
-    date: "",
-    completed: true,
-  },
-  {
-    title: "7-Day Streak",
-    description:
-      "Routine officially installed.",
-    date: "LOCKED",
-    completed: false,
-  },
-  {
-    title: "21-Day Completion",
-    description:
-      "The trader you were meant to become.",
-    date: "LOCKED",
-    completed: false,
-  },
-];
+function scoreFooterText(score) {
+  if (score >= 75) return "Elite mode. You're building real trader equity — habits that pay you back for decades.";
+  if (score >= 50) return "Consistency is forming. Keep journaling, keep showing up. The score follows the routine.";
+  return "Early days. Show up tomorrow. Discipline scores compound — small actions, applied daily.";
+}
 
 export default function ProgressScreen({ navigation }) {
   const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 768;
 
-  const isDesktop =
-    Platform.OS === "web" && width >= 768;
+  const { user } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
 
+  const {
+    data: progress,
+    isLoading: progressLoading,
+    isError: progressError,
+    refetch: refetchProgress,
+  } = useQuery({
+    queryKey: ["progress"],
+    queryFn: () => progressApi.get().then((r) => r.data),
+  });
+
+  const { data: challenge, refetch: refetchChallenge } = useQuery({
+    queryKey: ["challenge"],
+    queryFn: () => challengeApi.lessons().then((r) => r.data),
+  });
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchProgress(), refetchChallenge()]);
+    setRefreshing(false);
+  }, [refetchProgress, refetchChallenge]);
+
+  // ─── Derived values ──────────────────────────────────────────────────────────
+  const currentStreak = progress?.current_streak ?? 0;
+  const journalCount = progress?.journal_entries_count ?? 0;
+  const challengePct = progress?.challenge_completion_percent ?? 0;
+  const daysActive = progress?.days_active ?? 0;
+  const score = progress?.personal_progress_score ?? 0;
+  const completedDays = challenge?.completed_days ?? [];
+  const completedCount = completedDays.length;
+
+  const scoreItems = useMemo(() => [
+    {
+      title: "Journaling",
+      description: "Document each trade. Even setups you skip.",
+      score: `+${Math.min(journalCount * 4, 40)}`,
+      progress: Math.min(journalCount * 5, 100),
+    },
+    {
+      title: "Challenge Days",
+      description: "Complete one lesson per day. Compound the routine.",
+      score: `+${Math.round(challengePct * 0.35)}`,
+      progress: challengePct,
+    },
+    {
+      title: "Days Active",
+      description: "Show up daily. Even 10 minutes counts.",
+      score: `+${Math.min(daysActive * 2, 20)}`,
+      progress: Math.min((daysActive / 30) * 100, 100),
+    },
+    {
+      title: "Streak",
+      description: "Don't break the chain. Streaks compound discipline.",
+      score: `+${Math.min(currentStreak * 5, 10)}`,
+      progress: Math.min((currentStreak / 10) * 100, 100),
+    },
+  ], [journalCount, challengePct, daysActive, currentStreak]);
+
+  const timelineItems = useMemo(() => {
+    const joinedDate = user?.created_at
+      ? formatDate(user.created_at, "MMM DD, YYYY").toUpperCase()
+      : "";
+    const hasJournal = journalCount > 0;
+    const challengeAny = completedCount > 0;
+    const streak7 = currentStreak >= 7;
+    const challengeAll = completedCount >= 21;
+
+    return [
+      {
+        title: "Joined the platform",
+        description: "The decision to become a better trader.",
+        date: joinedDate,
+        completed: true,
+      },
+      {
+        title: "First Journal Entry",
+        description: "The day documentation became a habit.",
+        date: hasJournal ? "DONE" : "PENDING",
+        completed: hasJournal,
+      },
+      {
+        title: "First Live Session",
+        description: "Joined the process. Stopped trading alone.",
+        date: "PENDING",
+        completed: false,
+      },
+      {
+        title: "First Challenge Day Completed",
+        description: "Discipline started compounding.",
+        date: challengeAny ? "DONE" : "PENDING",
+        completed: challengeAny,
+      },
+      {
+        title: "7-Day Streak",
+        description: "Routine officially installed.",
+        date: streak7 ? "DONE" : "LOCKED",
+        completed: streak7,
+      },
+      {
+        title: "21-Day Completion",
+        description: "The trader you were meant to become.",
+        date: challengeAll ? "DONE" : "LOCKED",
+        completed: challengeAll,
+      },
+    ];
+  }, [user, journalCount, completedCount, currentStreak]);
+
+  // ─── Loading state ───────────────────────────────────────────────────────────
+  if (progressLoading && !progress) {
+    return (
+      <ScreenLayout screenName="ProgressScreen" navigation={navigation}>
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color={PRIMARY} />
+        </View>
+      </ScreenLayout>
+    );
+  }
+
+  if (progressError && !progress) {
+    return (
+      <ScreenLayout screenName="ProgressScreen" navigation={navigation}>
+        <View style={styles.centerState}>
+          <Ionicons name="cloud-offline-outline" size={40} color="#333" />
+          <Text style={styles.errorText}>Couldn't load progress data</Text>
+          <TouchableOpacity onPress={refetchProgress} style={styles.retryBtn}>
+            <Text style={styles.retryText}>Tap to retry</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenLayout>
+    );
+  }
+
+  // ─── Main render ─────────────────────────────────────────────────────────────
   return (
-    <ScreenLayout
-      screenName="ProgressScreen"
-      navigation={navigation}
-    >
+    <ScreenLayout screenName="ProgressScreen" navigation={navigation}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={
-          styles.contentContainer
-        }
+        contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={PRIMARY}
+            colors={[PRIMARY]}
+          />
+        }
       >
         {/* HERO */}
-
         <View style={styles.heroSection}>
           <View style={styles.heroBadge}>
-            <Ionicons
-              name="analytics-outline"
-              size={12}
-              color={PRIMARY}
-            />
-
-            <Text style={styles.heroBadgeText}>
-              PROGRESS
-            </Text>
+            <Ionicons name="analytics-outline" size={12} color={PRIMARY} />
+            <Text style={styles.heroBadgeText}>PROGRESS</Text>
           </View>
 
           <Text style={styles.heroTitle}>
             Receipts of{" "}
-            <Text style={styles.heroGreen}>
-              the work.
-            </Text>
+            <Text style={styles.heroGreen}>the work.</Text>
           </Text>
 
           <Text style={styles.heroSubtitle}>
-            Discipline leaves a trail.
-            Here is yours — and the trader
+            Discipline leaves a trail.{"\n"}
+            Here is yours — and the trader{"\n"}
             you're becoming.
           </Text>
         </View>
 
         {/* STATS */}
-
-        <View
-          style={[
-            styles.statsGrid,
-            isDesktop &&
-              styles.statsGridDesktop,
-          ]}
-        >
+        <View style={[styles.statsGrid, isDesktop && styles.statsGridDesktop]}>
           <View style={styles.statCard}>
-            <View
-              style={styles.statHeader}
-            >
-              <Text style={styles.cardLabel}>
-                CURRENT STREAK
-              </Text>
-
-              <Ionicons
-                name="flame-outline"
-                size={18}
-                color={PRIMARY}
-              />
+            <View style={styles.statHeader}>
+              <Text style={styles.cardLabel}>CURRENT STREAK</Text>
+              <Ionicons name="flame-outline" size={18} color={PRIMARY} />
             </View>
-
             <Text style={styles.statValue}>
-              0
-              <Text style={styles.statUnit}>
-                {" "}
-                days
-              </Text>
+              {currentStreak}
+              <Text style={styles.statUnit}> days</Text>
             </Text>
+            {currentStreak === 0 && (
+              <Text style={styles.statFooter}>TODAY IS DAY 1</Text>
+            )}
+          </View>
 
-            <Text style={styles.statFooter}>
-              TODAY IS DAY 1
+          <View style={styles.statCard}>
+            <View style={styles.statHeader}>
+              <Text style={styles.cardLabel}>JOURNAL ENTRIES</Text>
+              <Ionicons name="create-outline" size={18} color={PRIMARY} />
+            </View>
+            <Text style={styles.statValue}>
+              {journalCount}
+              <Text style={styles.statUnit}> logged</Text>
             </Text>
           </View>
 
           <View style={styles.statCard}>
-            <View
-              style={styles.statHeader}
-            >
-              <Text style={styles.cardLabel}>
-                JOURNAL ENTRIES
-              </Text>
-
-              <Ionicons
-                name="create-outline"
-                size={18}
-                color={PRIMARY}
-              />
+            <View style={styles.statHeader}>
+              <Text style={styles.cardLabel}>CHALLENGE</Text>
+              <Ionicons name="calendar-outline" size={18} color={PRIMARY} />
             </View>
-
             <Text style={styles.statValue}>
-              4
-              <Text style={styles.statUnit}>
-                {" "}
-                logged
-              </Text>
+              {Math.round(challengePct)}%
+              <Text style={styles.statUnit}> complete</Text>
             </Text>
           </View>
 
           <View style={styles.statCard}>
-            <View
-              style={styles.statHeader}
-            >
-              <Text style={styles.cardLabel}>
-                CHALLENGE
-              </Text>
-
-              <Ionicons
-                name="calendar-outline"
-                size={18}
-                color={PRIMARY}
-              />
+            <View style={styles.statHeader}>
+              <Text style={styles.cardLabel}>DAYS ACTIVE</Text>
+              <Ionicons name="pulse-outline" size={18} color={PRIMARY} />
             </View>
-
             <Text style={styles.statValue}>
-              14%
-              <Text style={styles.statUnit}>
-                {" "}
-                complete
-              </Text>
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View
-              style={styles.statHeader}
-            >
-              <Text style={styles.cardLabel}>
-                DAYS ACTIVE
-              </Text>
-
-              <Ionicons
-                name="pulse-outline"
-                size={18}
-                color={PRIMARY}
-              />
-            </View>
-
-            <Text style={styles.statValue}>
-              2
-              <Text style={styles.statUnit}>
-                {" "}
-                days
-              </Text>
+              {daysActive}
+              <Text style={styles.statUnit}> days</Text>
             </Text>
           </View>
         </View>
 
-        {/* Discipline Score Starts Here */}
-                {/* DISCIPLINE SCORE */}
-
+        {/* DISCIPLINE SCORE */}
         <View style={styles.scoreCard}>
           <View style={styles.scoreTopRow}>
             <View style={styles.scoreBadge}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={12}
-                color={PRIMARY}
-              />
-
-              <Text style={styles.scoreBadgeText}>
-                DISCIPLINE SCORE
-              </Text>
+              <Ionicons name="shield-checkmark-outline" size={12} color={PRIMARY} />
+              <Text style={styles.scoreBadgeText}>DISCIPLINE SCORE</Text>
             </View>
-
-            <Text style={styles.scoreRange}>
-              0 - 100
-            </Text>
+            <Text style={styles.scoreRange}>0 - 100</Text>
           </View>
 
           <View style={styles.scoreHero}>
-            <Text style={styles.scoreValue}>
-              29
-            </Text>
-
+            <Text style={styles.scoreValue}>{score}</Text>
             <Text style={styles.scoreDescription}>
               Composite measure of{"\n"}
               consistency, journaling, and{"\n"}
@@ -280,238 +269,139 @@ export default function ProgressScreen({ navigation }) {
           </View>
 
           <View style={styles.scoreProgressTrack}>
-            <View
-              style={[
-                styles.scoreProgressFill,
-                { width: "29%" },
-              ]}
-            />
+            <View style={[styles.scoreProgressFill, { width: `${score}%` }]} />
           </View>
 
           <View style={styles.movesHeader}>
-            <Ionicons
-              name="information-circle-outline"
-              size={14}
-              color="#777"
-            />
-
-            <Text style={styles.movesTitle}>
-              WHAT MOVES YOUR SCORE
-            </Text>
+            <Ionicons name="information-circle-outline" size={14} color="#777" />
+            <Text style={styles.movesTitle}>WHAT MOVES YOUR SCORE</Text>
           </View>
 
-          <View
-            style={[
-              styles.scoreGrid,
-              isDesktop &&
-                styles.scoreGridDesktop,
-            ]}
-          >
-            {scoreItems.map(
-              (item, index) => (
-                <View
-                  key={index}
-                  style={styles.factorCard}
-                >
-                  <View
-                    style={
-                      styles.factorTopRow
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.factorTitle
-                      }
-                    >
-                      {item.title}
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.factorScore
-                      }
-                    >
-                      {item.score}
-                    </Text>
-                  </View>
-
-                  <Text
-                    style={
-                      styles.factorDescription
-                    }
-                  >
-                    {item.description}
-                  </Text>
-
-                  <View
-                    style={
-                      styles.factorTrack
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.factorFill,
-                        {
-                          width: `${item.progress}%`,
-                        },
-                      ]}
-                    />
-                  </View>
+          <View style={[styles.scoreGrid, isDesktop && styles.scoreGridDesktop]}>
+            {scoreItems.map((item, index) => (
+              <View key={index} style={styles.factorCard}>
+                <View style={styles.factorTopRow}>
+                  <Text style={styles.factorTitle}>{item.title}</Text>
+                  <Text style={styles.factorScore}>{item.score}</Text>
                 </View>
-              )
-            )}
+
+                <Text style={styles.factorDescription}>{item.description}</Text>
+
+                <View style={styles.factorTrack}>
+                  <View style={[styles.factorFill, { width: `${item.progress}%` }]} />
+                </View>
+              </View>
+            ))}
           </View>
 
-          <Text style={styles.scoreFooter}>
-            Early days. Show up tomorrow.
-            Discipline scores compound —
-            small actions, applied daily.
-          </Text>
+          <Text style={styles.scoreFooter}>{scoreFooterText(score)}</Text>
         </View>
 
         {/* TIMELINE */}
-
         <View style={styles.timelineCard}>
           <View style={styles.timelineBadge}>
-            <Ionicons
-              name="sparkles-outline"
-              size={12}
-              color={PRIMARY}
-            />
-
-            <Text
-              style={
-                styles.timelineBadgeText
-              }
-            >
-              YOUR STORY
-            </Text>
+            <Ionicons name="sparkles-outline" size={12} color={PRIMARY} />
+            <Text style={styles.timelineBadgeText}>YOUR STORY</Text>
           </View>
 
-          <Text style={styles.timelineTitle}>
-            Your trading timeline.
-          </Text>
+          <Text style={styles.timelineTitle}>Your trading timeline.</Text>
 
-          <Text
-            style={styles.timelineSubtitle}
-          >
-            Every breakthrough leaves a
-            mark. Watch your trader self
+          <Text style={styles.timelineSubtitle}>
+            Every breakthrough leaves a{"\n"}
+            mark. Watch your trader self{"\n"}
             emerge — milestone by milestone.
           </Text>
 
-          <View
-            style={styles.timelineWrapper}
-          >
-            {timelineItems.map(
-              (item, index) => (
-                <View
-                  key={index}
-                  style={
-                    styles.timelineRow
-                  }
-                >
-                  {/* LEFT SIDE */}
-
+          <View style={styles.timelineWrapper}>
+            {timelineItems.map((item, index) => (
+              <View key={index} style={styles.timelineRow}>
+                {/* LEFT SIDE */}
+                <View style={styles.timelineLeft}>
                   <View
-                    style={
-                      styles.timelineLeft
-                    }
+                    style={[
+                      styles.timelineDot,
+                      item.completed && styles.timelineDotCompleted,
+                    ]}
                   >
-                    <View
-                      style={[
-                        styles.timelineDot,
-
-                        item.completed &&
-                          styles.timelineDotCompleted,
-                      ]}
-                    >
-                      {item.completed && (
-                        <Ionicons
-                          name="checkmark"
-                          size={10}
-                          color="#000"
-                        />
-                      )}
-                    </View>
-
-                    {index !==
-                      timelineItems.length -
-                        1 && (
-                      <View
-                        style={
-                          styles.timelineLine
-                        }
-                      />
+                    {item.completed && (
+                      <Ionicons name="checkmark" size={10} color="#000" />
                     )}
                   </View>
 
-                  {/* CENTER */}
-
-                  <View
-                    style={
-                      styles.timelineContent
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.timelineItemTitle,
-
-                        !item.completed &&
-                          styles.timelineMuted,
-                      ]}
-                    >
-                      {item.title}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.timelineItemDesc,
-
-                        !item.completed &&
-                          styles.timelineMutedDesc,
-                      ]}
-                    >
-                      {
-                        item.description
-                      }
-                    </Text>
-                  </View>
-
-                  {/* RIGHT */}
-
-                  <View
-                    style={
-                      styles.timelineDateBox
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.timelineDate,
-
-                        item.date ===
-                          "LOCKED" &&
-                          styles.timelineLocked,
-
-                        item.date ===
-                          "PENDING" &&
-                          styles.timelinePending,
-                      ]}
-                    >
-                      {item.date}
-                    </Text>
-                  </View>
+                  {index !== timelineItems.length - 1 && (
+                    <View style={styles.timelineLine} />
+                  )}
                 </View>
-              )
-            )}
+
+                {/* CENTER */}
+                <View style={styles.timelineContent}>
+                  <Text
+                    style={[
+                      styles.timelineItemTitle,
+                      !item.completed && styles.timelineMuted,
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.timelineItemDesc,
+                      !item.completed && styles.timelineMutedDesc,
+                    ]}
+                  >
+                    {item.description}
+                  </Text>
+                </View>
+
+                {/* RIGHT */}
+                <View style={styles.timelineDateBox}>
+                  <Text
+                    style={[
+                      styles.timelineDate,
+                      item.date === "LOCKED" && styles.timelineLocked,
+                      item.date === "PENDING" && styles.timelinePending,
+                    ]}
+                  >
+                    {item.date}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
         </View>
-
       </ScrollView>
     </ScreenLayout>
   );
 }
+
 const styles = StyleSheet.create({
+  centerState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#050505",
+  },
+
+  errorText: {
+    color: "#666",
+    marginTop: 12,
+    fontSize: 13,
+  },
+
+  retryBtn: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: PRIMARY,
+  },
+
+  retryText: {
+    color: PRIMARY,
+    fontSize: 13,
+  },
+
   container: {
     flex: 1,
     backgroundColor: "#050505",
@@ -523,7 +413,7 @@ const styles = StyleSheet.create({
   },
 
   heroSection: {
-    marginBottom: 24,
+    marginBottom: 18,
   },
 
   heroBadge: {
@@ -531,12 +421,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.25)",
     backgroundColor: "rgba(57,255,20,0.05)",
-    marginBottom: 16,
+    marginBottom: 14,
   },
 
   heroBadgeText: {
@@ -549,9 +439,9 @@ const styles = StyleSheet.create({
 
   heroTitle: {
     color: "#fff",
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "900",
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   heroGreen: {
@@ -560,13 +450,13 @@ const styles = StyleSheet.create({
 
   heroSubtitle: {
     color: "#b0b0b0",
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   statsGrid: {
-    gap: 14,
-    marginBottom: 22,
+    gap: 12,
+    marginBottom: 18,
   },
 
   statsGridDesktop: {
@@ -576,16 +466,16 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: "#0a0a0a",
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#1c1c1c",
-    padding: 18,
+    padding: 14,
   },
 
   statHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 10,
   },
 
   cardLabel: {
@@ -597,18 +487,18 @@ const styles = StyleSheet.create({
 
   statValue: {
     color: "#fff",
-    fontSize: 34,
+    fontSize: 26,
     fontWeight: "900",
   },
 
   statUnit: {
     color: "#777",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
   },
 
   statFooter: {
-    marginTop: 14,
+    marginTop: 10,
     color: PRIMARY,
     fontSize: 11,
     fontWeight: "700",
@@ -622,8 +512,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#1c1c1c",
-    padding: 20,
-    marginBottom: 22,
+    padding: 16,
+    marginBottom: 18,
   },
 
   scoreTopRow: {
@@ -660,30 +550,30 @@ const styles = StyleSheet.create({
   scoreHero: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 18,
-    marginBottom: 20,
+    marginTop: 14,
+    marginBottom: 16,
   },
 
   scoreValue: {
     color: "#fff",
-    fontSize: 58,
+    fontSize: 44,
     fontWeight: "900",
     marginRight: 16,
   },
 
   scoreDescription: {
     color: "#8e8e8e",
-    fontSize: 13,
-    lineHeight: 22,
+    fontSize: 12,
+    lineHeight: 20,
     flex: 1,
   },
 
   scoreProgressTrack: {
-    height: 8,
+    height: 6,
     borderRadius: 999,
     backgroundColor: "#181818",
     overflow: "hidden",
-    marginBottom: 24,
+    marginBottom: 18,
   },
 
   scoreProgressFill: {
@@ -695,7 +585,7 @@ const styles = StyleSheet.create({
   movesHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   movesTitle: {
@@ -707,7 +597,7 @@ const styles = StyleSheet.create({
   },
 
   scoreGrid: {
-    gap: 12,
+    gap: 10,
   },
 
   scoreGridDesktop: {
@@ -733,21 +623,21 @@ const styles = StyleSheet.create({
 
   factorTitle: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
   },
 
   factorScore: {
     color: PRIMARY,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
   },
 
   factorDescription: {
     color: "#8a8a8a",
-    fontSize: 12,
-    lineHeight: 20,
-    marginBottom: 12,
+    fontSize: 11,
+    lineHeight: 18,
+    marginBottom: 10,
   },
 
   factorTrack: {
@@ -764,10 +654,10 @@ const styles = StyleSheet.create({
   },
 
   scoreFooter: {
-    marginTop: 22,
+    marginTop: 16,
     color: "#8a8a8a",
-    fontSize: 13,
-    lineHeight: 22,
+    fontSize: 12,
+    lineHeight: 20,
   },
 
   /* TIMELINE */
@@ -777,7 +667,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#1c1c1c",
-    padding: 20,
+    padding: 16,
   },
 
   timelineBadge: {
@@ -788,9 +678,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(57,255,20,0.25)",
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     backgroundColor: "rgba(57,255,20,0.05)",
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
   timelineBadgeText: {
@@ -803,33 +693,33 @@ const styles = StyleSheet.create({
 
   timelineTitle: {
     color: "#fff",
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "900",
-    marginBottom: 10,
+    marginBottom: 8,
   },
 
   timelineSubtitle: {
     color: "#8e8e8e",
-    fontSize: 14,
-    lineHeight: 24,
-    marginBottom: 26,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 18,
   },
 
   timelineWrapper: {},
 
   timelineRow: {
     flexDirection: "row",
-    marginBottom: 22,
+    marginBottom: 16,
   },
 
   timelineLeft: {
     alignItems: "center",
-    width: 26,
+    width: 22,
   },
 
   timelineDot: {
-    width: 16,
-    height: 16,
+    width: 14,
+    height: 14,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "#4a4a4a",
@@ -852,20 +742,20 @@ const styles = StyleSheet.create({
 
   timelineContent: {
     flex: 1,
-    paddingLeft: 14,
+    paddingLeft: 12,
   },
 
   timelineItemTitle: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   timelineItemDesc: {
     color: "#8e8e8e",
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   timelineMuted: {
@@ -879,7 +769,7 @@ const styles = StyleSheet.create({
   timelineDateBox: {
     justifyContent: "flex-start",
     alignItems: "flex-end",
-    minWidth: 90,
+    minWidth: 76,
   },
 
   timelineDate: {

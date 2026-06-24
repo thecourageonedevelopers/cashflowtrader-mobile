@@ -2,6 +2,7 @@
   "expo": {
     "name": "cashflowtrader",
     "slug": "cashflowtrader",
+    "scheme": "cashflowtrader",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -32,7 +33,14 @@
       }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Cashflow Trader to select your profile photo.",
+          "cameraPermission": "Allow Cashflow Trader to take a profile photo."
+        }
+      ]
     ]
   }
 }
