@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PRIMARY, authBaseStyles } from "../auth/AuthStyles";
 
@@ -7,9 +7,11 @@ export default function AppHeader({ onMenuPress, showMenuButton = true }) {
   return (
     <View style={styles.header}>
       <View style={styles.logoRow}>
-        <View style={authBaseStyles.logoBox}>
-          <Text style={authBaseStyles.logoLetter}>C</Text>
-        </View>
+        <Image
+          source={require("../../assets/icon.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
 
         <Text style={authBaseStyles.brandText}>
           Cashflow <Text style={{ color: PRIMARY }}>Trader</Text>
@@ -44,6 +46,12 @@ const styles = StyleSheet.create({
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
+  },
+
+  logo: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
   },
 
   menuBtn: {

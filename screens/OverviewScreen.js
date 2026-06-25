@@ -174,32 +174,85 @@ function calcMomentum(mission) {
   return `${need} more ${need === 1 ? "action" : "actions"} and today's score reaches 90+.`;
 }
 
-// ─── Sparkline (native bar-chart, mirrors web SVG sparkline) ─────────────────
-// Shows g.trend data as proportionally-sized bars, right-aligned dot is current.
+// ─── Sparkline ────────────────────────────────────────────────────────────────
+// Ports the web SVG polyline sparkline (DashboardHome.jsx Sparkline component)
+// to pure React Native using rotated Views as line segments.
+// Web: SVG width=80 height=22, polyline stroke="#39FF14" strokeWidth="1.5",
+//      last-point dot r=2.2 fill="#39FF14".
 function Sparkline({ data }) {
-  const raw = Array.isArray(data) && data.length > 0 ? data : null;
-  const pts = raw ? raw.slice(-8) : [0, 1]; // at most 8 bars; flat fallback
-  const max = Math.max(...pts, 1);
-  const H = 20;
-  const BAR_W = 3;
-  const GAP = 2;
+  const raw = Array.isArray(data) && data.length > 1 ? data : null;
+  const pts = raw ? raw.slice(-8) : null;
+
+  const W = 80;
+  const H = 22;
+  const STROKE = 1.5;
+  const DOT_R = 2.2;
+
+  if (!pts) {
+    // Flat single-point fallback — just a dot at the right
+    return (
+      <View style={{ width: W, height: H, flexShrink: 0, justifyContent: "center", alignItems: "flex-end" }}>
+        <View style={{ width: DOT_R * 2, height: DOT_R * 2, borderRadius: DOT_R, backgroundColor: PRIMARY }} />
+      </View>
+    );
+  }
+
+  const max = Math.max(...pts);
+  const min = Math.min(...pts);
+  const flat = max === min;
+  const range = flat ? 1 : max - min;
+  const step = W / (pts.length - 1);
+
+  // Mirror web: y = flat ? H/2 : H - ((v-min)/range) * (H-3) - 1.5
+  const coords = pts.map((v, i) => ({
+    x: i * step,
+    y: flat ? H / 2 : H - ((v - min) / range) * (H - STROKE * 2) - STROKE,
+  }));
+
+  const last = coords[coords.length - 1];
+
+  // Build line segments: each segment is a rotated View positioned at its midpoint.
+  // RN rotates around the center of the View by default, so placing the View
+  // with (left = cx - len/2, top = cy - STROKE/2) and rotating by angle°
+  // correctly draws a line from point i to point i+1.
+  const segs = coords.slice(0, -1).map(({ x: x1, y: y1 }, i) => {
+    const { x: x2, y: y2 } = coords[i + 1];
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    return { cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, len, angle };
+  });
+
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-end", height: H, flexShrink: 0, gap: GAP }}>
-      {pts.map((v, i) => {
-        const isLast = i === pts.length - 1;
-        const barH = Math.max(2, Math.round((Math.max(0, v) / max) * H));
-        return (
-          <View
-            key={i}
-            style={{
-              width: BAR_W,
-              height: barH,
-              backgroundColor: isLast ? PRIMARY : "rgba(57,255,20,0.28)",
-              borderRadius: 2,
-            }}
-          />
-        );
-      })}
+    <View style={{ width: W, height: H, flexShrink: 0 }}>
+      {segs.map((seg, i) => (
+        <View
+          key={i}
+          style={{
+            position: "absolute",
+            left: seg.cx - seg.len / 2,
+            top: seg.cy - STROKE / 2,
+            width: seg.len,
+            height: STROKE,
+            backgroundColor: "#39FF14",
+            borderRadius: STROKE,
+            transform: [{ rotate: `${seg.angle}deg` }],
+          }}
+        />
+      ))}
+      {/* Terminal dot — mirrors web <circle cx cy r="2.2" fill="#39FF14" /> */}
+      <View
+        style={{
+          position: "absolute",
+          left: last.x - DOT_R,
+          top: last.y - DOT_R,
+          width: DOT_R * 2,
+          height: DOT_R * 2,
+          borderRadius: DOT_R,
+          backgroundColor: "#39FF14",
+        }}
+      />
     </View>
   );
 }
@@ -420,7 +473,7 @@ export default function OverviewScreen({ navigation }) {
           {/* ══════════════════════════════════════════════════════════════
               MOBILE HERO  (mobile-specific greeting, not in web)
           ══════════════════════════════════════════════════════════════ */}
-          {/* <View style={styles.heroWrap}>
+          <View style={styles.heroWrap}>
             <View style={styles.heroCard}>
               <Text style={styles.heroDate}>{heroDate}</Text>
               <Text style={styles.heroTitle}>
@@ -432,13 +485,13 @@ export default function OverviewScreen({ navigation }) {
                   <Ionicons name="calendar-outline" size={17} color="#000" />
                   <Text style={styles.heroPrimaryText}>Continue 21-Day Challenge</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.heroSecondary} onPress={() => navigation.navigate("LiveTradingScreen")}>
+                <TouchableOpacity style={styles.heroSecondary} onPress={() => navigation.navigate("JournalScreen")}>
                   <Ionicons name="stats-chart-outline" size={17} color="#fff" />
-                  <Text style={styles.heroSecondaryText}>Live Market</Text>
+                  <Text style={styles.heroSecondaryText}>Trading AI</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </View> */}
+          </View>
 
           {/* ══════════════════════════════════════════════════════════════
               ROW 1a — TRADER IDENTITY
@@ -788,27 +841,38 @@ export default function OverviewScreen({ navigation }) {
                   const changed = g.current !== g.previous;
                   return (
                     <View key={g.key} style={styles.growthMetricCard}>
+                      {/* Label — matches web font-mono text-[10px] tracking-[0.18em] uppercase text-white/55 */}
                       <Text style={styles.growthMetricLabel}>{g.label || g.key}</Text>
+
+                      {/* Score row: prev → arrow → cur  (matches web flex items-end gap-2 mt-2) */}
                       <View style={styles.growthScoreRow}>
                         <Text style={styles.growthPrev}>{g.previous}</Text>
                         <Ionicons
                           name={changed ? (improved ? "arrow-up-outline" : "arrow-down-outline") : "remove-outline"}
-                          size={13}
-                          color={changed ? (improved ? PRIMARY : "#ff6b6b") : "#555"}
-                          style={{ marginHorizontal: 4 }}
+                          size={16}
+                          color={changed ? (improved ? PRIMARY : "#f87171") : "#444"}
+                          style={{ marginHorizontal: 3, marginBottom: 2 }}
                         />
                         <Text style={styles.growthCur}>{g.current}</Text>
+                      </View>
+
+                      {/* Bar + Sparkline row (matches web flex items-center gap-2 mt-2.5) */}
+                      <View style={styles.growthBarRow}>
+                        <View style={styles.growthTrack}>
+                          <View style={[styles.progressFill, { width: `${Math.min(100, g.current)}%` }]} />
+                        </View>
+                        <Sparkline data={g.trend} />
+                      </View>
+
+                      {/* Copy + improvement pct (matches web flex items-center justify-between mt-2) */}
+                      <View style={styles.growthCopyRow}>
+                        <Text style={styles.growthCopy}>{metricCopy(g)}</Text>
                         {improved && (
                           <Text style={styles.growthPct}>
                             {g.from_zero ? `+${g.improvement_pct}` : `+${g.improvement_pct}%`}
                           </Text>
                         )}
                       </View>
-                      {/* Progress bar + sparkline area */}
-                      <View style={styles.progressTrack}>
-                        <View style={[styles.progressFill, { width: `${Math.min(100, g.current)}%` }]} />
-                      </View>
-                      <Text style={styles.growthCopy}>{metricCopy(g)}</Text>
                     </View>
                   );
                 })}
@@ -1061,7 +1125,7 @@ const styles = StyleSheet.create({
 
   // Scroll
   container: { flex: 1, backgroundColor: "#050505" },
-  content: { padding: 20, paddingBottom: 48, gap: 20 },
+  content: { padding: 16, paddingBottom: 48, gap: 16 },
 
   // ── Shared ────────────────────────────────────────────────────────────────
   row: {
@@ -1087,12 +1151,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.30)",
     backgroundColor: "rgba(57,255,20,0.05)",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   chipText: {
     color: "rgba(57,255,20,0.80)",
     fontFamily: "Inter_700Bold",
-    fontSize: 9,
+    fontSize: 10,
     letterSpacing: 2,
   },
   // Standard glass card (matches web glass-strong)
@@ -1101,8 +1165,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1c1c1c",
     borderTopColor: HIGHLIGHT_TOP,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
   },
   progressTrack: { height: 6, backgroundColor: "#1c1c1c", borderRadius: 999, overflow: "hidden", marginVertical: 12 },
   progressFill: { height: "100%", backgroundColor: PRIMARY, borderRadius: 999 },
@@ -1233,14 +1297,41 @@ const styles = StyleSheet.create({
   disciplineAvgLabel: { color: "#666", fontFamily: "Inter_700Bold", fontSize: 8, letterSpacing: 2, marginTop: 3 },
 
   // ── Growth Metrics ────────────────────────────────────────────────────────
-  growthGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 4 },
-  growthMetricCard: { width: "47.5%", backgroundColor: "#111", borderRadius: 16, borderWidth: 1, borderColor: "#1c1c1c", padding: 12 },
-  growthMetricLabel: { color: "#888", fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 2, marginBottom: 8 },
-  growthScoreRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 6, flexWrap: "wrap" },
-  growthPrev: { color: "#555", fontSize: 14, fontFamily: "Inter_400Regular" },
-  growthCur: { color: "#fff", fontSize: 22, fontFamily: "Inter_800ExtraBold", lineHeight: 24 },
-  growthPct: { color: PRIMARY, fontSize: 11, fontFamily: "Inter_700Bold", marginLeft: 4, marginBottom: 2, alignSelf: "flex-end" },
-  growthCopy: { color: "#888", fontSize: 10, fontFamily: "Inter_400Regular", lineHeight: 15, marginTop: 4 },
+  // Web: grid sm:grid-cols-2 gap-3 — on mobile: single column, full-width cards
+  growthGrid: { gap: 10, marginTop: 4 },
+  // Web: p-4 rounded-xl border border-white/10 bg-white/[0.03] — full width on mobile
+  growthMetricCard: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    padding: 14,
+  },
+  // Web: font-mono text-[10px] tracking-[0.18em] uppercase text-white/55
+  growthMetricLabel: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  // Web: flex items-end gap-2 mt-2
+  growthScoreRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 8 },
+  // Web: font-mono text-lg text-white/35 leading-none
+  growthPrev: { color: "rgba(255,255,255,0.35)", fontSize: 18, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  // Web: font-mono font-black text-3xl text-white leading-none
+  growthCur: { color: "#fff", fontSize: 28, fontFamily: "Inter_900Black", lineHeight: 30 },
+  // Bar + sparkline container (web: flex items-center gap-2 mt-2.5)
+  growthBarRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  // Web: flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden
+  growthTrack: { flex: 1, height: 6, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 999, overflow: "hidden" },
+  // Copy + pct row (web: flex items-center justify-between gap-2 mt-2)
+  growthCopyRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 6 },
+  // Web: font-body text-[11px] text-white/65 leading-snug
+  growthCopy: { color: "rgba(255,255,255,0.65)", fontSize: 11, fontFamily: "Inter_400Regular", lineHeight: 16, flex: 1 },
+  // Web: font-mono text-[11px] text-[#39FF14] font-bold whitespace-nowrap
+  growthPct: { color: PRIMARY, fontSize: 11, fontFamily: "Inter_700Bold", flexShrink: 0 },
 
   // ── Biggest Strength (special green-glow border, matches web) ─────────────
   strengthCard: {

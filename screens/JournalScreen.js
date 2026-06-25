@@ -7,7 +7,10 @@ import {
   TextInput,
   StyleSheet,
   RefreshControl,
+  Modal,
+  Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Ionicons } from "@expo/vector-icons";
@@ -466,6 +469,14 @@ export default function JournalScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportBusy, setReportBusy] = useState("");
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
+
+  const parsePickerDate = (dateStr) => {
+    if (!dateStr) return new Date();
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
 
   const {
     data: entries = [],
@@ -748,26 +759,143 @@ export default function JournalScreen({ navigation }) {
             />
           </View>
           <View style={s.filterDatesRow}>
-            <View style={s.dateInputWrap}>
-              <TextInput
-                style={s.dateInput}
-                placeholder="From YYYY-MM-DD"
-                placeholderTextColor="rgba(255,255,255,0.2)"
-                value={dateFrom}
-                onChangeText={setDateFrom}
-              />
-            </View>
-            <View style={s.dateInputWrap}>
-              <TextInput
-                style={s.dateInput}
-                placeholder="To YYYY-MM-DD"
-                placeholderTextColor="rgba(255,255,255,0.2)"
-                value={dateTo}
-                onChangeText={setDateTo}
-              />
-            </View>
+            {Platform.OS === "web" ? (
+              <>
+                <View style={s.dateButton}>
+                  <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.3)" style={{ marginRight: 6 }} />
+                  <input
+                    type="date"
+                    value={dateFrom || ""}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      background: "transparent",
+                      border: "none",
+                      outline: "none",
+                      color: dateFrom ? "#fff" : "rgba(255,255,255,0.2)",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                      colorScheme: "dark",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </View>
+                <View style={s.dateButton}>
+                  <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.3)" style={{ marginRight: 6 }} />
+                  <input
+                    type="date"
+                    value={dateTo || ""}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      background: "transparent",
+                      border: "none",
+                      outline: "none",
+                      color: dateTo ? "#fff" : "rgba(255,255,255,0.2)",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                      colorScheme: "dark",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={s.dateButton} onPress={() => setShowFromPicker(true)}>
+                  <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.3)" style={{ marginRight: 6 }} />
+                  <Text style={dateFrom ? s.dateButtonText : s.dateButtonPlaceholder}>
+                    {dateFrom || "From date"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.dateButton} onPress={() => setShowToPicker(true)}>
+                  <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.3)" style={{ marginRight: 6 }} />
+                  <Text style={dateTo ? s.dateButtonText : s.dateButtonPlaceholder}>
+                    {dateTo || "To date"}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
+
+        {/* ── Date pickers ─────────────────────────────────────────────────── */}
+        {showFromPicker && Platform.OS === "android" && (
+          <DateTimePicker
+            value={parsePickerDate(dateFrom)}
+            mode="date"
+            display="default"
+            onChange={(event, date) => {
+              setShowFromPicker(false);
+              if (event.type !== "dismissed" && date) {
+                setDateFrom(date.toISOString().slice(0, 10));
+              }
+            }}
+          />
+        )}
+        {showToPicker && Platform.OS === "android" && (
+          <DateTimePicker
+            value={parsePickerDate(dateTo)}
+            mode="date"
+            display="default"
+            onChange={(event, date) => {
+              setShowToPicker(false);
+              if (event.type !== "dismissed" && date) {
+                setDateTo(date.toISOString().slice(0, 10));
+              }
+            }}
+          />
+        )}
+        <Modal
+          transparent
+          animationType="fade"
+          visible={showFromPicker && Platform.OS === "ios"}
+          onRequestClose={() => setShowFromPicker(false)}
+        >
+          <View style={s.pickerOverlay}>
+            <View style={s.pickerBox}>
+              <DateTimePicker
+                value={parsePickerDate(dateFrom)}
+                mode="date"
+                display="inline"
+                onChange={(event, date) => {
+                  if (date) setDateFrom(date.toISOString().slice(0, 10));
+                }}
+                themeVariant="dark"
+                accentColor={PRIMARY}
+              />
+              <TouchableOpacity style={s.pickerDoneBtn} onPress={() => setShowFromPicker(false)}>
+                <Text style={s.pickerDoneText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <Modal
+          transparent
+          animationType="fade"
+          visible={showToPicker && Platform.OS === "ios"}
+          onRequestClose={() => setShowToPicker(false)}
+        >
+          <View style={s.pickerOverlay}>
+            <View style={s.pickerBox}>
+              <DateTimePicker
+                value={parsePickerDate(dateTo)}
+                mode="date"
+                display="inline"
+                onChange={(event, date) => {
+                  if (date) setDateTo(date.toISOString().slice(0, 10));
+                }}
+                themeVariant="dark"
+                accentColor={PRIMARY}
+              />
+              <TouchableOpacity style={s.pickerDoneBtn} onPress={() => setShowToPicker(false)}>
+                <Text style={s.pickerDoneText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* ── Quick filter chips (only when entries exist) ────────────────── */}
         {entries.length > 0 ? (
@@ -1340,17 +1468,53 @@ const s = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  dateInputWrap: { flex: 1 },
-  dateInput: {
-    color: "#fff",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+  dateButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.4)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  dateButtonText: {
+    flex: 1,
+    color: "#fff",
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+  },
+  dateButtonPlaceholder: {
+    flex: 1,
+    color: "rgba(255,255,255,0.2)",
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pickerBox: {
+    backgroundColor: "#111",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    overflow: "hidden",
+    width: 340,
+  },
+  pickerDoneBtn: {
+    backgroundColor: PRIMARY,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  pickerDoneText: {
+    color: "#000",
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    letterSpacing: 1,
   },
 
   // Quick filters
