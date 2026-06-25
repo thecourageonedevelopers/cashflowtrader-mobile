@@ -11,13 +11,11 @@ import {
   RefreshControl,
   Modal,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import * as ImagePicker from "expo-image-picker";
 
 import ScreenLayout from "../components/common/ScreenLayout";
 import { PRIMARY } from "../components/auth/AuthStyles";
@@ -57,7 +55,7 @@ const EMPTY_FORM = {
 function SectionHeader({ icon, label }) {
   return (
     <View style={styles.sectionHeader}>
-      <Ionicons name={icon} size={13} color={PRIMARY} />
+      <Ionicons name={icon} size={11} color="rgba(57,255,20,0.8)" />
       <Text style={styles.sectionHeaderText}>{label}</Text>
     </View>
   );
@@ -80,7 +78,7 @@ function PickerTrigger({ label, displayValue, placeholder, onPress }) {
         <Text style={[styles.pickerValue, !displayValue && styles.pickerPlaceholder]}>
           {displayValue || placeholder}
         </Text>
-        <Ionicons name="chevron-down-outline" size={16} color="#555" />
+        <Ionicons name="chevron-down-outline" size={16} color="rgba(255,255,255,0.45)" />
       </TouchableOpacity>
     </View>
   );
@@ -169,7 +167,7 @@ export default function ProfileScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 768;
   const { user, refresh } = useAuth();
-  const { showAlert, showOptions } = useAlert();
+  const { showAlert } = useAlert();
 
   // ── Form state ─────────────────────────────────────────────────────────────
   const [form, setForm] = useState(EMPTY_FORM);
@@ -180,7 +178,6 @@ export default function ProfileScreen({ navigation }) {
   // ── Operation states ───────────────────────────────────────────────────────
   const [saving, setSaving] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
-  const [avatarLoading, setAvatarLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   // ── Picker modal visibility ────────────────────────────────────────────────
@@ -240,7 +237,6 @@ export default function ProfileScreen({ navigation }) {
     ...archetypeData.map((a) => ({ value: a.name, label: a.name })),
   ], [archetypeData]);
 
-  const avatarUrl = profile?.avatar_url || user?.avatar_url;
   const avatarInitial = (user?.name || user?.email || "T").trim().charAt(0).toUpperCase();
 
   const currencyLabel = useMemo(
@@ -302,64 +298,6 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  // ── Avatar ─────────────────────────────────────────────────────────────────
-  const handleAvatarPress = () => {
-    const buttons = [
-      { text: "Choose from Library", onPress: handlePickImage },
-    ];
-    if (avatarUrl) {
-      buttons.push({ text: "Remove Photo", style: "destructive", onPress: handleDeleteAvatar });
-    }
-    buttons.push({ text: "Cancel", style: "cancel" });
-    showOptions({ title: "Profile Photo", message: "Update your profile picture", buttons });
-  };
-
-  const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      showAlert({ type: "warning", title: "Permission Needed", message: "Allow Cashflow Trader to access your photos to upload a profile picture." });
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-
-    const asset = result.assets[0];
-    setAvatarLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append("avatar", {
-        uri: Platform.OS === "android" ? asset.uri : asset.uri.replace("file://", ""),
-        type: asset.mimeType || "image/jpeg",
-        name: asset.fileName || "avatar.jpg",
-      });
-      await profileApi.uploadAvatar(fd);
-      await refresh();
-      showAlert({ type: "success", title: "Updated", message: "Profile photo updated." });
-    } catch (e) {
-      showAlert({ type: "error", title: "Error", message: extractApiError(e) });
-    } finally {
-      setAvatarLoading(false);
-    }
-  };
-
-  const handleDeleteAvatar = async () => {
-    setAvatarLoading(true);
-    try {
-      await profileApi.deleteAvatar();
-      await refresh();
-      showAlert({ type: "success", title: "Removed", message: "Profile photo removed." });
-    } catch (e) {
-      showAlert({ type: "error", title: "Error", message: extractApiError(e) });
-    } finally {
-      setAvatarLoading(false);
-    }
-  };
-
   // ── Loading / error states ─────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -409,48 +347,29 @@ export default function ProfileScreen({ navigation }) {
           }
         >
 
-          {/* ───── Identity / Avatar ───── */}
-          <View style={styles.card}>
+          {/* ───── Identity / Hero — matches web glass-strong hero card ───── */}
+          <View style={[styles.card, styles.heroCard]}>
             <View style={styles.identityRow}>
-              {/* Avatar */}
-              <TouchableOpacity
-                style={styles.avatarWrap}
-                onPress={handleAvatarPress}
-                disabled={avatarLoading}
-                activeOpacity={0.8}
-              >
-                {avatarLoading ? (
-                  <View style={styles.avatar}>
-                    <ActivityIndicator size="small" color="#000" />
-                  </View>
-                ) : avatarUrl ? (
-                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-                ) : (
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarInitial}>{avatarInitial}</Text>
-                  </View>
-                )}
-                <View style={styles.cameraBtn}>
-                  <Ionicons name="camera" size={12} color="#fff" />
-                </View>
-              </TouchableOpacity>
+              {/* Avatar — non-interactive circle with initial, matches web w-20 rounded-full */}
+              <View style={styles.avatar}>
+                <Text style={styles.avatarInitial}>{avatarInitial}</Text>
+              </View>
 
-              {/* Name + badge */}
+              {/* Chip + heading + sub — matches web chip/h1/p layout */}
               <View style={styles.identityInfo}>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>MY PROFILE</Text>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="person-outline" size={11} color="rgba(57,255,20,0.8)" />
+                  <Text style={styles.sectionHeaderText}>My Profile</Text>
                 </View>
-                <Text style={styles.identityName} numberOfLines={1}>
-                  {user?.name || "Trader"}
+                <Text style={styles.heroHeading}>
+                  Edit your{" "}
+                  <Text style={styles.heroHeadingAccent}>identity & goals</Text>.
                 </Text>
-                <Text style={styles.identityEmail} numberOfLines={1}>
-                  {user?.email || ""}
+                <Text style={styles.identityHint}>
+                  Your name, your numbers, your weekly & monthly targets. The system measures you against them — automatically.
                 </Text>
               </View>
             </View>
-            <Text style={styles.identityHint}>
-              Edit your identity, goals, and P&L targets. The system measures you against them automatically.
-            </Text>
           </View>
 
           {/* ───── Goal Progress ───── */}
@@ -496,7 +415,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.name}
                 onChangeText={(v) => update("name", v)}
                 placeholder="Your full name"
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 selectionColor={PRIMARY}
               />
             </FormField>
@@ -515,7 +434,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.mobile}
                 onChangeText={(v) => update("mobile", v)}
                 placeholder="+91 ..."
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 keyboardType="phone-pad"
                 selectionColor={PRIMARY}
               />
@@ -527,7 +446,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.timezone}
                 onChangeText={(v) => update("timezone", v)}
                 placeholder="e.g. Asia/Kolkata"
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 selectionColor={PRIMARY}
               />
             </FormField>
@@ -545,7 +464,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.bio}
                 onChangeText={(v) => update("bio", v)}
                 placeholder="e.g. Patient breakout trader. NIFTY index. 1% risk. Mornings only."
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -564,7 +483,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.daily_goal}
                 onChangeText={(v) => update("daily_goal", v)}
                 placeholder="e.g. Take only A+ setups, 2 trades max"
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 selectionColor={PRIMARY}
               />
             </FormField>
@@ -575,7 +494,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.weekly_goal}
                 onChangeText={(v) => update("weekly_goal", v)}
                 placeholder="e.g. Follow plan every day, log every trade"
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 selectionColor={PRIMARY}
               />
             </FormField>
@@ -586,7 +505,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.monthly_goal}
                 onChangeText={(v) => update("monthly_goal", v)}
                 placeholder="e.g. 60% win rate, zero revenge trades"
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 selectionColor={PRIMARY}
               />
             </FormField>
@@ -597,7 +516,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.yearly_goal}
                 onChangeText={(v) => update("yearly_goal", v)}
                 placeholder="e.g. Quit job by Dec, scale to ₹50L capital"
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 selectionColor={PRIMARY}
               />
             </FormField>
@@ -608,7 +527,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.weekly_pnl_target}
                 onChangeText={(v) => update("weekly_pnl_target", v)}
                 placeholder="15000"
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 keyboardType="numeric"
                 selectionColor={PRIMARY}
               />
@@ -620,7 +539,7 @@ export default function ProfileScreen({ navigation }) {
                 value={form.monthly_pnl_target}
                 onChangeText={(v) => update("monthly_pnl_target", v)}
                 placeholder="60000"
-                placeholderTextColor="#3a3a3a"
+                placeholderTextColor="rgba(255,255,255,0.30)"
                 keyboardType="numeric"
                 selectionColor={PRIMARY}
               />
@@ -634,7 +553,7 @@ export default function ProfileScreen({ navigation }) {
             />
           </View>
 
-          {/* ───── Save Profile ───── */}
+          {/* ───── Save Profile — matches web neon-btn with glow shadow ───── */}
           <TouchableOpacity
             style={[styles.saveBtn, saving && styles.saveBtnBusy]}
             onPress={handleSaveProfile}
@@ -659,7 +578,7 @@ export default function ProfileScreen({ navigation }) {
                   value={pw.current_password}
                   onChangeText={(v) => setPw((p) => ({ ...p, current_password: v }))}
                   placeholder="••••••••"
-                  placeholderTextColor="#3a3a3a"
+                  placeholderTextColor="rgba(255,255,255,0.30)"
                   secureTextEntry={!showCurrentPw}
                   autoComplete="current-password"
                   autoCorrect={false}
@@ -673,7 +592,7 @@ export default function ProfileScreen({ navigation }) {
                   <Ionicons
                     name={showCurrentPw ? "eye-outline" : "eye-off-outline"}
                     size={20}
-                    color="#555"
+                    color="rgba(255,255,255,0.45)"
                   />
                 </TouchableOpacity>
               </View>
@@ -686,7 +605,7 @@ export default function ProfileScreen({ navigation }) {
                   value={pw.new_password}
                   onChangeText={(v) => setPw((p) => ({ ...p, new_password: v }))}
                   placeholder="••••••••"
-                  placeholderTextColor="#3a3a3a"
+                  placeholderTextColor="rgba(255,255,255,0.30)"
                   secureTextEntry={!showNewPw}
                   autoComplete="new-password"
                   autoCorrect={false}
@@ -700,7 +619,7 @@ export default function ProfileScreen({ navigation }) {
                   <Ionicons
                     name={showNewPw ? "eye-outline" : "eye-off-outline"}
                     size={20}
-                    color="#555"
+                    color="rgba(255,255,255,0.45)"
                   />
                 </TouchableOpacity>
               </View>
@@ -713,8 +632,8 @@ export default function ProfileScreen({ navigation }) {
               activeOpacity={0.8}
             >
               {pwSaving
-                ? <ActivityIndicator size="small" color={PRIMARY} />
-                : <Ionicons name="checkmark-circle-outline" size={18} color={PRIMARY} />
+                ? <ActivityIndicator size="small" color="rgba(255,255,255,0.85)" />
+                : <Ionicons name="checkmark-circle-outline" size={18} color="rgba(255,255,255,0.85)" />
               }
               <Text style={styles.pwBtnText}>
                 {pwSaving ? "Updating..." : "Update Password"}
@@ -750,11 +669,12 @@ export default function ProfileScreen({ navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const CARD_BG      = "#0d0d0d";
-const CARD_BORDER  = "#1e1e1e";
-const INPUT_BG     = "#111";
-const INPUT_BORDER = "#262626";
-const LABEL_COLOR  = "#555";
+// Matching web's glass-strong and cf-input palette with translucent values
+const CARD_BG      = "rgba(10,10,10,0.9)";   // web: rgba(10,10,10,0.8)
+const CARD_BORDER  = "rgba(255,255,255,0.10)"; // web: border-white/10
+const INPUT_BG     = "rgba(255,255,255,0.03)"; // web: cf-input bg
+const INPUT_BORDER = "rgba(255,255,255,0.10)"; // web: cf-input border
+const LABEL_COLOR  = "rgba(255,255,255,0.45)"; // web: text-white/45
 const TEXT_COLOR   = "#fff";
 
 const styles = StyleSheet.create({
@@ -791,10 +711,10 @@ const styles = StyleSheet.create({
 
   // ── Scroll ──────────────────────────────────────────────────────────────
   scrollContent: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 40,
-    gap: 12,
+    gap: 16,
   },
 
   scrollContentDesktop: {
@@ -804,117 +724,105 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  // ── Card ────────────────────────────────────────────────────────────────
+  // ── Card — matches web glass-strong ─────────────────────────────────────
   card: {
     backgroundColor: CARD_BG,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-    padding: 18,
+    padding: 20,
     gap: 14,
+  },
+
+  // Hero card with green glow — matches web absolute green blob + glass-strong
+  heroCard: {
+    borderColor: "rgba(57,255,20,0.18)",
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 4,
   },
 
   cardLast: {
     marginBottom: 0,
   },
 
-  // ── Section header ──────────────────────────────────────────────────────
+  // ── Section header — green pill chip matching all other screens ──────────
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingBottom: 2,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(57,255,20,0.30)",
+    backgroundColor: "rgba(57,255,20,0.08)",
   },
 
   sectionHeaderText: {
-    color: PRIMARY,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.6,
+    color: "rgba(57,255,20,0.80)",
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
 
-  // ── Identity ────────────────────────────────────────────────────────────
+  // ── Identity / Hero ──────────────────────────────────────────────────────
   identityRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 16,
   },
 
-  avatarWrap: {
-    position: "relative",
-  },
-
+  // Avatar — non-interactive, matches web w-20 h-20 rounded-full green circle
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: PRIMARY,
     justifyContent: "center",
     alignItems: "center",
-  },
-
-  avatarImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 15,
+    elevation: 8,
+    flexShrink: 0,
   },
 
   avatarInitial: {
     color: "#000",
-    fontSize: 28,
+    fontSize: 32,
+    fontFamily: "Inter_900Black",
     fontWeight: "900",
-  },
-
-  cameraBtn: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#333",
-    borderWidth: 2,
-    borderColor: CARD_BG,
-    justifyContent: "center",
-    alignItems: "center",
   },
 
   identityInfo: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
 
-  badge: {
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: PRIMARY,
-    borderRadius: 50,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-
-  badgeText: {
-    color: PRIMARY,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-
-  identityName: {
+  // Hero heading — matches web h1 font-black text-3xl tracking-tighter
+  heroHeading: {
     color: TEXT_COLOR,
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: 26,
+    fontFamily: "Inter_900Black",
+    fontWeight: "900",
+    letterSpacing: -0.5,
+    lineHeight: 32,
   },
 
-  identityEmail: {
-    color: "#666",
-    fontSize: 12,
+  heroHeadingAccent: {
+    color: PRIMARY,
   },
 
   identityHint: {
-    color: "#555",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 12,
+    fontFamily: "Inter_400Regular",
     lineHeight: 18,
   },
 
@@ -928,12 +836,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
+  // GoalBar — matches web p-4 rounded-md border-white/10 bg-white/[0.02]
   goalBar: {
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "rgba(255,255,255,0.02)",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#1a1a1a",
-    padding: 12,
+    borderColor: "rgba(255,255,255,0.10)",
+    padding: 16,
     gap: 6,
   },
 
@@ -944,8 +853,9 @@ const styles = StyleSheet.create({
   },
 
   goalBarLabel: {
-    color: "#666",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 10,
+    fontFamily: "Inter_700Bold",
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -954,13 +864,14 @@ const styles = StyleSheet.create({
 
   goalBarPct: {
     fontSize: 13,
+    fontFamily: "Inter_900Black",
     fontWeight: "900",
   },
 
   goalBarTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "rgba(255,255,255,0.06)",
     overflow: "hidden",
   },
 
@@ -975,22 +886,25 @@ const styles = StyleSheet.create({
   },
 
   goalBarMeta: {
-    color: "#555",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 10,
+    fontFamily: "Inter_400Regular",
   },
 
+  // StatCard — matches web p-3 rounded-md border-white/10 bg-white/[0.02]
   statCard: {
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "rgba(255,255,255,0.02)",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#1a1a1a",
+    borderColor: "rgba(255,255,255,0.10)",
     padding: 12,
     flex: 1,
   },
 
   statLabel: {
-    color: "#555",
+    color: "rgba(255,255,255,0.45)",
     fontSize: 9,
+    fontFamily: "Inter_700Bold",
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -1000,12 +914,14 @@ const styles = StyleSheet.create({
   statValue: {
     color: TEXT_COLOR,
     fontSize: 20,
+    fontFamily: "Inter_900Black",
     fontWeight: "900",
   },
 
   statHint: {
-    color: "#555",
+    color: "rgba(255,255,255,0.35)",
     fontSize: 9,
+    fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
 
@@ -1014,41 +930,46 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
+  // Field label — matches web font-mono text-[10px] tracking-[0.2em] uppercase text-white/45
   fieldLabel: {
     color: LABEL_COLOR,
     fontSize: 10,
+    fontFamily: "Inter_700Bold",
     fontWeight: "700",
-    letterSpacing: 1.2,
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
 
+  // Input — matches web cf-input: bg-white/[0.03] border-white/10 rounded-lg 10px 12px 14px
   input: {
     backgroundColor: INPUT_BG,
     borderWidth: 1,
     borderColor: INPUT_BORDER,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     color: TEXT_COLOR,
-    fontSize: 15,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
   },
 
   inputDisabled: {
-    color: "#444",
+    color: "rgba(255,255,255,0.40)",
     opacity: 0.6,
   },
 
   inputMultiline: {
-    minHeight: 80,
-    paddingTop: 12,
+    minHeight: 72,
+    paddingTop: 10,
   },
 
   pickerTrigger: {
     backgroundColor: INPUT_BG,
     borderWidth: 1,
     borderColor: INPUT_BORDER,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1056,13 +977,14 @@ const styles = StyleSheet.create({
 
   pickerValue: {
     color: TEXT_COLOR,
-    fontSize: 15,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
     flex: 1,
     marginRight: 8,
   },
 
   pickerPlaceholder: {
-    color: "#3a3a3a",
+    color: "rgba(255,255,255,0.30)",
   },
 
   // ── Password row ─────────────────────────────────────────────────────────
@@ -1078,16 +1000,16 @@ const styles = StyleSheet.create({
 
   eyeBtn: {
     width: 44,
-    height: 46,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: INPUT_BG,
     borderWidth: 1,
     borderColor: INPUT_BORDER,
-    borderRadius: 10,
+    borderRadius: 8,
   },
 
-  // ── Save button ──────────────────────────────────────────────────────────
+  // ── Save button — matches web neon-btn with shadow-[0_0_40px_rgba(57,255,20,0.4)] ─
   saveBtn: {
     backgroundColor: PRIMARY,
     borderRadius: 12,
@@ -1096,6 +1018,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.40,
+    shadowRadius: 20,
+    elevation: 8,
   },
 
   saveBtnBusy: {
@@ -1105,16 +1032,17 @@ const styles = StyleSheet.create({
   saveBtnText: {
     color: "#000",
     fontSize: 16,
+    fontFamily: "Inter_700Bold",
     fontWeight: "800",
   },
 
-  // ── Password button ──────────────────────────────────────────────────────
+  // ── Password button — matches web border-white/15 text-white/85 ──────────
   pwBtn: {
-    borderRadius: 10,
-    paddingVertical: 13,
+    borderRadius: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: "#2a2a2a",
+    borderColor: "rgba(255,255,255,0.15)",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -1127,8 +1055,9 @@ const styles = StyleSheet.create({
   },
 
   pwBtnText: {
-    color: PRIMARY,
+    color: "rgba(255,255,255,0.85)",
     fontSize: 14,
+    fontFamily: "Inter_700Bold",
     fontWeight: "700",
   },
 
@@ -1144,7 +1073,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderTopWidth: 1,
-    borderColor: "#1e1e1e",
+    borderColor: CARD_BORDER,
     maxHeight: "65%",
     paddingBottom: Platform.OS === "ios" ? 34 : 16,
   },
@@ -1156,12 +1085,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#1e1e1e",
+    borderBottomColor: CARD_BORDER,
   },
 
   modalTitle: {
     color: TEXT_COLOR,
     fontSize: 15,
+    fontFamily: "Inter_700Bold",
     fontWeight: "700",
   },
 
@@ -1172,7 +1102,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#0f0f0f",
+    borderBottomColor: "rgba(255,255,255,0.04)",
   },
 
   modalOptionActive: {
@@ -1180,12 +1110,14 @@ const styles = StyleSheet.create({
   },
 
   modalOptionText: {
-    color: "#aaa",
+    color: "rgba(255,255,255,0.65)",
     fontSize: 15,
+    fontFamily: "Inter_400Regular",
   },
 
   modalOptionTextActive: {
     color: TEXT_COLOR,
-    fontWeight: "600",
+    fontFamily: "Inter_700Bold",
+    fontWeight: "700",
   },
 });

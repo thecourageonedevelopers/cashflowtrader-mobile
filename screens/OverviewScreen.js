@@ -556,7 +556,7 @@ export default function OverviewScreen({ navigation }) {
           {dashboard && (
             <View style={styles.poiCard}>
               {/* Header */}
-              <View style={styles.row}>
+              <View style={[styles.row, { justifyContent: "space-between" }]}>
                 <View style={styles.chip}>
                   <Ionicons name="trophy-outline" size={11} color="rgba(57,255,20,0.8)" />
                   <Text style={styles.chipText}>Proof Of Improvement</Text>
@@ -617,7 +617,7 @@ export default function OverviewScreen({ navigation }) {
           ══════════════════════════════════════════════════════════════ */}
           <View style={styles.card}>
             {/* Header: chip + "Open →" link */}
-            <View style={styles.row}>
+            <View style={[styles.row, { justifyContent: "space-between" }]}>
               <View style={styles.chip}>
                 <Ionicons name="rocket-outline" size={11} color="rgba(57,255,20,0.8)" />
                 <Text style={styles.chipText}>Transformation Progress</Text>
@@ -711,7 +711,7 @@ export default function OverviewScreen({ navigation }) {
           {dbMission?.tasks?.length > 0 && (
             <View style={styles.card}>
               {/* Header: chip + count/pct */}
-              <View style={styles.row}>
+              <View style={[styles.row, { justifyContent: "space-between" }]}>
                 <View style={styles.chip}>
                   <Ionicons name="flag-outline" size={11} color="rgba(57,255,20,0.8)" />
                   <Text style={styles.chipText}>Today's Mission</Text>
@@ -933,8 +933,8 @@ export default function OverviewScreen({ navigation }) {
           ══════════════════════════════════════════════════════════════ */}
           <View style={styles.card}>
             {/* Header: chip + subtitle + "All sessions →" link */}
-            <View style={styles.row}>
-              <View>
+            <View style={[styles.row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
+              <View style={{ flex: 1, marginRight: 12 }}>
                 <View style={[styles.chip, { marginBottom: 6 }]}>
                   <Ionicons name="radio-outline" size={11} color="rgba(57,255,20,0.8)" />
                   <Text style={styles.chipText}>Live Support · Today</Text>
@@ -998,19 +998,19 @@ export default function OverviewScreen({ navigation }) {
               Net P&L / Win Rate / Trades + mobile extras (goal, weekly, records)
           ══════════════════════════════════════════════════════════════ */}
           <View style={styles.perfSection}>
-            {/* Header + "Full analytics →" link (matches web layout) */}
-            <View style={styles.row}>
-              <View style={styles.row}>
-                <Ionicons name="document-text-outline" size={11} color="#555" />
-                <Text style={styles.perfHeaderText}>Performance · Report Card (Secondary)</Text>
+            {/* Header: chip + "Full analytics →" link */}
+            <View style={[styles.row, { justifyContent: "space-between" }]}>
+              <View style={styles.chip}>
+                <Ionicons name="document-text-outline" size={11} color="rgba(57,255,20,0.8)" />
+                <Text style={styles.chipText}>Performance · Report Card</Text>
               </View>
-              <TouchableOpacity onPress={() => navigation.navigate("JournalScreen")} style={styles.row}>
+              <TouchableOpacity onPress={() => navigation.navigate("JournalScreen")} style={styles.openLink}>
                 <Text style={styles.perfLink}>Full analytics</Text>
-                <Ionicons name="arrow-forward" size={11} color="#555" />
+                <Ionicons name="arrow-forward" size={12} color="rgba(255,255,255,0.50)" />
               </TouchableOpacity>
             </View>
 
-            {/* 3 main stats — exactly matching web PerfStat components */}
+            {/* 3 main stats — matching web PerfStat components */}
             <View style={styles.perfStats}>
               <View style={styles.perfStatCell}>
                 <Text style={styles.perfStatValue}>{money(monthlyPnL, { showSign: true })}</Text>
@@ -1026,13 +1026,10 @@ export default function OverviewScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Footer copy (matches web exactly) */}
+            {/* Footer copy */}
             <Text style={styles.perfFooter}>
               Profit is the outcome. Discipline is the cause. Keep your eyes above this line.
             </Text>
-
-            {/* ── MOBILE EXTRAS (goal + weekly breakdown + records) ─── */}
-            <View style={styles.perfDivider} />
 
             {/* Monthly goal */}
             {/* <View style={styles.perfGoalCard}>
@@ -1147,16 +1144,16 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.30)",
-    backgroundColor: "rgba(57,255,20,0.05)",
+    backgroundColor: "rgba(57,255,20,0.08)",
     marginBottom: 12,
   },
   chipText: {
     color: "rgba(57,255,20,0.80)",
     fontFamily: "Inter_700Bold",
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
   },
   // Standard glass card (matches web glass-strong)
@@ -1170,7 +1167,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: { height: 6, backgroundColor: "#1c1c1c", borderRadius: 999, overflow: "hidden", marginVertical: 12 },
   progressFill: { height: "100%", backgroundColor: PRIMARY, borderRadius: 999 },
-  openLink: { flexDirection: "row", alignItems: "center", gap: 4 },
+  openLink: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 0 },
   openLinkText: { color: PRIMARY, fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 2 },
 
   // ── Hero ─────────────────────────────────────────────────────────────────
@@ -1360,7 +1357,7 @@ const styles = StyleSheet.create({
   growthAreaMsg: { color: "rgba(255,255,255,0.65)", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 21 },
 
   // ── Live Support ──────────────────────────────────────────────────────────
-  liveSubtitle: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15, lineHeight: 21, flex: 1 },
+  liveSubtitle: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 15, lineHeight: 21 },
   liveEmpty: { paddingVertical: 24, alignItems: "center" },
   liveEmptyText: { color: "#555", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 20, textAlign: "center" },
   sessionCard: { backgroundColor: "rgba(255,255,255,0.02)", borderWidth: 1, borderColor: "#1c1c1c", borderRadius: 14, padding: 14, marginTop: 10 },
@@ -1377,22 +1374,19 @@ const styles = StyleSheet.create({
 
   // ── Performance Analytics (ROW 6, secondary/muted — matches web opacity-70) ─
   perfSection: {
-    opacity: 0.75,
-    borderRadius: 20,
+    opacity: 0.70,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-    backgroundColor: "rgba(255,255,255,0.015)",
-    padding: 20,
-    gap: 0,
+    borderColor: "rgba(255,255,255,0.07)",
+    backgroundColor: "rgba(255,255,255,0.02)",
+    padding: 24,
   },
-  perfHeaderText: { color: "#555", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 2, flex: 1, marginLeft: 6 },
-  perfLink: { color: "rgba(255,255,255,0.45)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1 },
-  perfStats: { flexDirection: "row", gap: 8, marginTop: 14, marginBottom: 12 },
-  perfStatCell: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.05)", backgroundColor: "rgba(0,0,0,0.25)", alignItems: "center" },
-  perfStatValue: { color: "rgba(255,255,255,0.80)", fontFamily: "Inter_800ExtraBold", fontSize: 18, marginBottom: 4 },
-  perfStatLabel: { color: "#555", fontFamily: "Inter_700Bold", fontSize: 8, letterSpacing: 2, textAlign: "center" },
-  perfFooter: { color: "#444", fontFamily: "Inter_400Regular", fontSize: 11, lineHeight: 18 },
-  perfDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.06)", marginVertical: 16 },
+  perfLink: { color: "rgba(255,255,255,0.50)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1 },
+  perfStats: { flexDirection: "row", gap: 8, marginTop: 0, marginBottom: 12 },
+  perfStatCell: { flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", backgroundColor: "rgba(0,0,0,0.30)", alignItems: "center" },
+  perfStatValue: { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_700Bold", fontSize: 24, marginBottom: 4 },
+  perfStatLabel: { color: "rgba(255,255,255,0.35)", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 1.8, textAlign: "center", textTransform: "uppercase" },
+  perfFooter: { color: "rgba(255,255,255,0.30)", fontFamily: "Inter_400Regular", fontSize: 10, lineHeight: 16 },
   perfExtraLabel: { color: "#555", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 2, marginBottom: 6 },
   perfGoalCard: { marginBottom: 12 },
   perfGoalPct: { color: "rgba(57,255,20,0.60)", fontFamily: "Inter_800ExtraBold", fontSize: 14 },
