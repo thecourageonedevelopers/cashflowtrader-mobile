@@ -129,6 +129,7 @@ export function AuthProvider({ children }) {
   // ── Derived flags ───────────────────────────────────────────────────────
   const value = {
     user,
+    setUser,
     loading,
 
     // Actions

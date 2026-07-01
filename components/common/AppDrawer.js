@@ -1,3 +1,24 @@
+/**
+ * AppDrawer — RN port of web DashboardLayout.jsx sidebar.
+ *
+ * Menu order, icons, profile card, admin logic, and styling all match
+ * React Web exactly. Web is the ONLY source of truth.
+ *
+ * Web LINKS order (source: DashboardLayout.jsx):
+ *   1. Overview        — LayoutDashboard → home-outline
+ *   2. 21-Day Challenge — CalendarDays   → calendar-outline
+ *   3. Auto Journal    — NotebookPen     → book-outline
+ *   4. Live Sessions   — Radio           → radio-outline
+ *   5. Progress        — Activity        → pulse-outline
+ *   6. Support         — HeadphonesIcon  → headset-outline
+ *
+ * Bottom (fixed):
+ *   — My Profile       — UserCircle2     → person-circle-outline
+ *   — Sign Out         — LogOut          → log-out-outline
+ *
+ * Conditional (staff only):
+ *   — Admin OS / Sales OS / Staff OS — ShieldCheck → shield-checkmark-outline
+ */
 import React, { memo, useMemo } from "react";
 import {
   View,
@@ -12,178 +33,59 @@ import { PRIMARY, authBaseStyles } from "../auth/AuthStyles";
 import DrawerItem from "./DrawerItem";
 import { useAuth } from "../../src/context/AuthContext";
 
+// ─── Design tokens (matching web DashboardLayout.jsx) ────────────────────────
+const NEON = "#39FF14";
+const BG = "#000";
+const BORDER_DIM = "rgba(255,255,255,0.10)";
+
+// ─── Menu items — exact order from web LINKS array ────────────────────────────
 const MENU_ITEMS = [
-  { icon: "home-outline",         label: "Overview",          route: "OverviewScreen"      },
-  { icon: "trophy-outline",       label: "21-Day Challenge",  route: "ChallengeScreen"     },
-  // { icon: "trending-up-outline",  label: "Live Trading",      route: "LiveTradingScreen"   },
-  { icon: "scan-outline",         label: "Trading AI",        route: "JournalScreen"       },
-  { icon: "videocam-outline",     label: "Live Sessions",     route: "SessionsScreen"      },
-  { icon: "bar-chart-outline",    label: "Progress",          route: "ProgressScreen"      },
-  { icon: "help-circle-outline",  label: "Support",           route: "SupportScreen"       },
+  { icon: "home-outline",      label: "Overview",         route: "OverviewScreen"  },
+  { icon: "calendar-outline",  label: "21-Day Challenge", route: "ChallengeScreen" },
+  { icon: "book-outline",      label: "Auto Journal",     route: "JournalScreen"   },
+  { icon: "radio-outline",     label: "Live Sessions",    route: "SessionsScreen"  },
+  { icon: "pulse-outline",     label: "Progress",         route: "ProgressScreen"  },
+  { icon: "headset-outline",   label: "Support",          route: "SupportScreen"   },
 ];
 
-function getInitials(name) {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+// ─── Admin label logic — mirrors web DashboardLayout.jsx ─────────────────────
+function getStaffLabel(user) {
+  if (user?.is_admin) return "Admin OS";
+  const perms = user?.permissions || [];
+  const salesOnly =
+    perms.length > 0 &&
+    perms.every((p) => p === "sales_agent" || p === "manage_sales");
+  return salesOnly ? "Sales OS" : "Staff OS";
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#090909",
-    borderRightWidth: 1,
-    borderRightColor: "#1a1a1a",
-  },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
-  },
-
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  profileCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 12,
-    marginTop: 14,
-    marginBottom: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#111",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#1e1e1e",
-  },
-
-  avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: PRIMARY,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-
-  avatarText: {
-    color: "#000",
-    fontSize: 16,
-    fontWeight: "900",
-  },
-
-  profileInfo: {
-    flex: 1,
-  },
-
-  roleBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(57, 255, 20, 0.1)",
-    borderWidth: 1,
-    borderColor: PRIMARY,
-    borderRadius: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    marginBottom: 6,
-  },
-
-  roleText: {
-    color: PRIMARY,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-
-  profileName: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-
-  profileEmail: {
-    color: "#666",
-    fontSize: 11,
-  },
-
-  challengeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-  },
-
-  challengeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: PRIMARY,
-    marginRight: 5,
-  },
-
-  challengeText: {
-    color: PRIMARY,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-
-  menuScroll: {
-    flex: 1,
-    paddingTop: 4,
-  },
-
-  adminSpacer: {
-    height: 8,
-  },
-
-  separator: {
-    height: 1,
-    backgroundColor: "#1a1a1a",
-    marginHorizontal: 20,
-    marginBottom: 4,
-  },
-
-  bottomSection: {
-    paddingBottom: 6,
-  },
-});
-
+// ─── Component ────────────────────────────────────────────────────────────────
 export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, permanent = false }) {
-  const { user, isAdmin, hasChallengeAccess, logout } = useAuth();
+  const { user, hasChallengeAccess, logout } = useAuth();
 
-  const avatarInitials = useMemo(() => getInitials(user?.name), [user?.name]);
+  // Web checks user?.is_staff for admin/staff visibility
+  const isStaff = !!user?.is_staff;
+  const staffLabel = useMemo(() => getStaffLabel(user), [user]);
 
   const navHandlers = useMemo(() => {
     const routes = [
       ...MENU_ITEMS.map((i) => i.route),
       "ProfileScreen",
       "AdminScreen",
-      "SignIn",
     ];
     return Object.fromEntries(routes.map((r) => [r, () => onNavigate(r)]));
   }, [onNavigate]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* ── Drawer header ── */}
-      <View style={styles.header}>
-        <View style={styles.logoRow}>
+    <SafeAreaView style={s.container} edges={["top", "bottom"]}>
+
+      {/* ── Header: logo + close button ── */}
+      <View style={s.header}>
+        <View style={s.logoRow}>
           <View style={authBaseStyles.logoBox}>
             <Text style={authBaseStyles.logoLetter}>C</Text>
           </View>
           <Text style={authBaseStyles.brandText}>
-            Cashflow{" "}
-            <Text style={{ color: PRIMARY }}>Trader</Text>
+            Cashflow <Text style={{ color: NEON }}>Trader</Text>
           </Text>
         </View>
 
@@ -192,39 +94,39 @@ export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, per
             onPress={onClose}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Ionicons name="close" size={24} color="#777" />
+            <Ionicons name="close" size={24} color="rgba(255,255,255,0.50)" />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* ── Profile card ── */}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{avatarInitials}</Text>
-        </View>
+      {/* ── Profile card — matches web: p-4 rounded-md border border-white/10 bg-white/[0.02] ── */}
+      {/*   No avatar (web sidebar has NO avatar image, text only) ── */}
+      <View style={s.profileCard}>
+        {/* "Trader" label — web: font-mono text-[10px] tracking-[0.2em] text-white/40 uppercase */}
+        <Text style={s.traderLabel}>Trader</Text>
 
-        <View style={styles.profileInfo}>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>TRADER</Text>
+        {/* Name — web: font-display font-bold text-base mt-1 truncate */}
+        <Text style={s.profileName} numberOfLines={1}>
+          {user?.name || "Trader"}
+        </Text>
+
+        {/* Email — web: font-mono text-xs text-white/50 truncate */}
+        <Text style={s.profileEmail} numberOfLines={1}>
+          {user?.email || ""}
+        </Text>
+
+        {/* Challenge badge — web: mt-2 inline-flex items-center gap-1 text-[10px] uppercase text-neon */}
+        {hasChallengeAccess && (
+          <View style={s.challengeBadge}>
+            <View style={s.challengeDot} />
+            <Text style={s.challengeText}>Challenge Active</Text>
           </View>
-          <Text style={styles.profileName} numberOfLines={1}>
-            {user?.name || "Trader"}
-          </Text>
-          <Text style={styles.profileEmail} numberOfLines={1}>
-            {user?.email || ""}
-          </Text>
-          {hasChallengeAccess && (
-            <View style={styles.challengeBadge}>
-              <View style={styles.challengeDot} />
-              <Text style={styles.challengeText}>CHALLENGE ACTIVE</Text>
-            </View>
-          )}
-        </View>
+        )}
       </View>
 
       {/* ── Navigation items ── */}
       <ScrollView
-        style={styles.menuScroll}
+        style={s.menuScroll}
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
@@ -238,35 +140,189 @@ export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, per
           />
         ))}
 
-        {isAdmin && (
-          <>
-            <View style={styles.adminSpacer} />
-            <DrawerItem
-              icon="shield-checkmark-outline"
-              label="Admin OS"
-              isActive={currentScreen === "AdminScreen"}
-              onPress={navHandlers.AdminScreen}
-            />
-          </>
+        {/* Admin / Staff OS — web: mt-4, always neon bg+border (not just when active) */}
+        {isStaff && (
+          <TouchableOpacity
+            style={s.adminItem}
+            onPress={navHandlers.AdminScreen}
+            activeOpacity={0.80}
+          >
+            <Ionicons name="shield-checkmark-outline" size={16} color={NEON} style={s.adminIcon} />
+            <Text style={s.adminLabel}>{staffLabel}</Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
 
-      {/* ── Bottom: Profile + Sign Out ── */}
-      <View style={styles.bottomSection}>
-        <View style={styles.separator} />
+      {/* ── Bottom: My Profile + Sign Out ── */}
+      <View style={s.bottomSection}>
+        {/* Separator — web: border-r border-white/10 */}
+        <View style={s.separator} />
+
+        {/* My Profile — same active/inactive styling as regular nav items */}
         <DrawerItem
-          icon="person-outline"
+          icon="person-circle-outline"
           label="My Profile"
           isActive={currentScreen === "ProfileScreen"}
           onPress={navHandlers.ProfileScreen}
         />
-        <DrawerItem
-          icon="log-out-outline"
-          label="Sign Out"
-          isActive={false}
+
+        {/* Sign Out — web: text-white/60 border border-white/10 (distinct from nav items) */}
+        <TouchableOpacity
+          style={s.signOutBtn}
           onPress={logout}
-        />
+          activeOpacity={0.75}
+        >
+          <Ionicons name="log-out-outline" size={16} color="rgba(255,255,255,0.60)" style={s.adminIcon} />
+          <Text style={s.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
+});
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  // Sidebar container — web: bg-black border-r border-white/10
+  container: {
+    flex: 1,
+    backgroundColor: BG,
+    borderRightWidth: 1,
+    borderRightColor: BORDER_DIM,
+  },
+
+  // Header — web: flex items-center justify-between gap-3 px-6 py-6
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER_DIM,
+  },
+
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  // Profile card — web: px-4 pt-2 wrapper, inner: p-4 rounded-md border border-white/10 bg-white/[0.02]
+  profileCard: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: BORDER_DIM,
+  },
+
+  // "Trader" label — web: font-mono text-[10px] tracking-[0.2em] text-white/40 uppercase
+  traderLabel: {
+    color: "rgba(255,255,255,0.40)",
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    fontFamily: "Inter_700Bold",
+  },
+
+  // Name — web: font-display font-bold text-base mt-1
+  profileName: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    marginTop: 4,
+  },
+
+  // Email — web: font-mono text-xs text-white/50
+  profileEmail: {
+    color: "rgba(255,255,255,0.50)",
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+
+  // Challenge badge — web: mt-2 inline-flex items-center gap-1 text-[10px] tracking-[0.15em] uppercase text-neon
+  challengeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  // dot — web: w-1.5 h-1.5 rounded-full bg-neon
+  challengeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: NEON,
+    marginRight: 4,
+  },
+  challengeText: {
+    color: NEON,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    fontFamily: "Inter_700Bold",
+  },
+
+  // Nav scroll area — web: px-4 mt-6 flex flex-col gap-1
+  menuScroll: {
+    flex: 1,
+    paddingTop: 8,
+  },
+
+  // Admin/Staff OS item — web: mt-4 text-neon bg-[#39FF14]/[0.06] border border-[#39FF14]/30
+  // Always has neon styling regardless of active state (different from regular nav items)
+  adminItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 44,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: "rgba(57,255,20,0.06)",
+    borderColor: "rgba(57,255,20,0.30)",
+  },
+  adminIcon: {
+    marginRight: 12,
+  },
+  adminLabel: {
+    color: NEON,
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+
+  // Bottom section
+  bottomSection: {
+    paddingBottom: 6,
+  },
+
+  // Separator — web: border-t border-white/10 equivalent
+  separator: {
+    height: 1,
+    backgroundColor: BORDER_DIM,
+    marginHorizontal: 24,
+    marginBottom: 6,
+  },
+
+  // Sign Out button — web: text-white/60 border border-white/10 (static, not conditional)
+  signOutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 44,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: BORDER_DIM,
+  },
+  signOutText: {
+    color: "rgba(255,255,255,0.60)",
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+  },
 });

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -18,8 +19,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 
 import ScreenLayout from "../components/common/ScreenLayout";
+import AvatarStudio from "../components/common/AvatarStudio";
 import { PRIMARY } from "../components/auth/AuthStyles";
 import { useAuth } from "../src/hooks/useAuth";
+import { useAvatarUrl } from "../src/lib/avatar";
 import { profileApi } from "../src/api/profile";
 import { currencySymbol } from "../src/utils/format";
 import { extractApiError } from "../src/utils/apiError";
@@ -40,6 +43,8 @@ const EMPTY_FORM = {
   mobile: "",
   timezone: "",
   bio: "",
+  occupation: "",
+  trader_persona: "",
   daily_goal: "",
   weekly_goal: "",
   monthly_goal: "",
@@ -50,7 +55,7 @@ const EMPTY_FORM = {
   trader_archetype: "",
 };
 
-// ─── Shared sub-components ────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionHeader({ icon, label }) {
   return (
@@ -61,11 +66,34 @@ function SectionHeader({ icon, label }) {
   );
 }
 
-function FormField({ label, children }) {
+function FormField({ label, hint, children }) {
   return (
     <View style={styles.formField}>
       <Text style={styles.fieldLabel}>{label}</Text>
       {children}
+      {!!hint && <Text style={styles.fieldHint}>{hint}</Text>}
+    </View>
+  );
+}
+
+function ProtectedField({ label, value, verified, changeLabel = "Change", onChangePress }) {
+  return (
+    <View style={styles.formField}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.protectedRow}>
+        <View style={styles.protectedDisplay}>
+          <Text style={styles.protectedValue} numberOfLines={1}>{value || "Not set"}</Text>
+          {verified && (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="shield-checkmark-outline" size={11} color={PRIMARY} />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity style={styles.changeBtn} onPress={onChangePress} activeOpacity={0.75}>
+          <Text style={styles.changeBtnText}>{changeLabel}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -179,6 +207,7 @@ export default function ProfileScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
 
   // ── Picker modal visibility ────────────────────────────────────────────────
   const [archetypePickerOpen, setArchetypePickerOpen] = useState(false);
@@ -210,6 +239,9 @@ export default function ProfileScreen({ navigation }) {
     staleTime: 10 * 60 * 1000,
   });
 
+  // ── Avatar URL (resolves picture → displayable URL with auth header) ────────
+  const avatarUrl = useAvatarUrl(profile?.picture ?? user?.picture);
+
   // ── Hydrate form from profile ──────────────────────────────────────────────
   useEffect(() => {
     if (!profile) return;
@@ -218,6 +250,8 @@ export default function ProfileScreen({ navigation }) {
       mobile: profile.mobile ?? "",
       timezone: profile.timezone ?? "",
       bio: profile.bio ?? "",
+      occupation: profile.occupation ?? "",
+      trader_persona: profile.trader_persona ?? "",
       daily_goal: profile.daily_goal ?? "",
       weekly_goal: profile.weekly_goal ?? "",
       monthly_goal: profile.monthly_goal ?? "",
@@ -253,7 +287,7 @@ export default function ProfileScreen({ navigation }) {
     setRefreshing(false);
   }, [refetchProfile, refetchGoalProgress]);
 
-  // ── Save profile ───────────────────────────────────────────────────────────
+  // ── Save profile — excludes mobile & timezone (protected, changed via verified flows) ─
   const handleSaveProfile = async () => {
     if (!form.name.trim()) {
       showAlert({ type: "warning", title: "Required", message: "Full name cannot be empty." });
@@ -261,8 +295,9 @@ export default function ProfileScreen({ navigation }) {
     }
     setSaving(true);
     try {
+      const { mobile, timezone, ...editable } = form;
       await profileApi.update({
-        ...form,
+        ...editable,
         weekly_pnl_target: Number(form.weekly_pnl_target) || 0,
         monthly_pnl_target: Number(form.monthly_pnl_target) || 0,
       });
@@ -347,15 +382,31 @@ export default function ProfileScreen({ navigation }) {
           }
         >
 
-          {/* ───── Identity / Hero — matches web glass-strong hero card ───── */}
+          {/* ───── Identity / Hero ───── */}
           <View style={[styles.card, styles.heroCard]}>
+            {/* Green glow orb — matches web absolute -top-24 -right-24 blob */}
+            <View style={styles.heroGlow} pointerEvents="none" />
+
             <View style={styles.identityRow}>
-              {/* Avatar — non-interactive circle with initial, matches web w-20 rounded-full */}
-              <View style={styles.avatar}>
-                <Text style={styles.avatarInitial}>{avatarInitial}</Text>
+              {/* Avatar with camera button overlay */}
+              <View style={styles.avatarWrap}>
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarInitial}>{avatarInitial}</Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.cameraBtn}
+                  onPress={() => setStudioOpen(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="camera-outline" size={14} color={PRIMARY} />
+                </TouchableOpacity>
               </View>
 
-              {/* Chip + heading + sub — matches web chip/h1/p layout */}
+              {/* Chip + heading + sub */}
               <View style={styles.identityInfo}>
                 <View style={styles.sectionHeader}>
                   <Ionicons name="person-outline" size={11} color="rgba(57,255,20,0.8)" />
@@ -375,7 +426,12 @@ export default function ProfileScreen({ navigation }) {
           {/* ───── Goal Progress ───── */}
           {goalProgress && (
             <View style={styles.card}>
-              <SectionHeader icon="sparkles-outline" label="Goal Progress" />
+              <View style={styles.goalProgressHeader}>
+                <SectionHeader icon="sparkles-outline" label="Goal Progress" />
+                <TouchableOpacity onPress={() => refetchGoalProgress()} activeOpacity={0.75}>
+                  <Text style={styles.refreshLink}>Refresh</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.twoCol}>
                 <GoalBar
                   label="Weekly P&L vs Target"
@@ -420,36 +476,34 @@ export default function ProfileScreen({ navigation }) {
               />
             </FormField>
 
-            <FormField label="EMAIL (READ-ONLY)">
-              <TextInput
-                style={[styles.input, styles.inputDisabled]}
-                value={user?.email ?? ""}
-                editable={false}
-              />
-            </FormField>
+            <ProtectedField
+              label="EMAIL"
+              value={user?.email}
+              verified={user?.email_verified !== false}
+              onChangePress={() =>
+                showAlert({ type: "info", title: "Change Email", message: "Email changes are managed via the web app for security verification." })
+              }
+            />
 
-            <FormField label="MOBILE">
-              <TextInput
-                style={styles.input}
-                value={form.mobile}
-                onChangeText={(v) => update("mobile", v)}
-                placeholder="+91 ..."
-                placeholderTextColor="rgba(255,255,255,0.30)"
-                keyboardType="phone-pad"
-                selectionColor={PRIMARY}
-              />
-            </FormField>
+            <ProtectedField
+              label="MOBILE"
+              value={form.mobile}
+              verified={!!user?.mobile_verified || !!user?.mobile_locked}
+              changeLabel={form.mobile ? "Change" : "Add"}
+              onChangePress={() =>
+                showAlert({ type: "info", title: "Change Mobile", message: "Mobile number changes require OTP verification. Use the web app to update." })
+              }
+            />
 
-            <FormField label="TIMEZONE">
-              <TextInput
-                style={styles.input}
-                value={form.timezone}
-                onChangeText={(v) => update("timezone", v)}
-                placeholder="e.g. Asia/Kolkata"
-                placeholderTextColor="rgba(255,255,255,0.30)"
-                selectionColor={PRIMARY}
-              />
-            </FormField>
+            <ProtectedField
+              label="TIMEZONE"
+              value={form.timezone}
+              verified={!!form.timezone}
+              changeLabel={form.timezone ? "Change" : "Set"}
+              onChangePress={() =>
+                showAlert({ type: "info", title: "Change Timezone", message: "Use the web app to select your timezone." })
+              }
+            />
 
             <PickerTrigger
               label="TRADER ARCHETYPE"
@@ -458,7 +512,7 @@ export default function ProfileScreen({ navigation }) {
               onPress={() => setArchetypePickerOpen(true)}
             />
 
-            <FormField label="TRADER BIO">
+            <FormField label="TRADER PERSONA / BIO">
               <TextInput
                 style={[styles.input, styles.inputMultiline]}
                 value={form.bio}
@@ -471,6 +525,114 @@ export default function ProfileScreen({ navigation }) {
                 selectionColor={PRIMARY}
               />
             </FormField>
+
+            <FormField
+              label="WHAT YOU DO (OCCUPATION)"
+              hint="Used to personalise your achievement certificates — your story matters."
+            >
+              <TextInput
+                style={styles.input}
+                value={form.occupation}
+                onChangeText={(v) => update("occupation", v)}
+                placeholder="e.g. taxi driver, student, software engineer"
+                placeholderTextColor="rgba(255,255,255,0.30)"
+                selectionColor={PRIMARY}
+              />
+            </FormField>
+          </View>
+
+          {/* ───── Security ───── */}
+          <View style={styles.card}>
+            <SectionHeader icon="shield-checkmark-outline" label="Security" />
+
+            {/* Email & Mobile verification status */}
+            <View style={styles.securityVerifyGrid}>
+              <View style={styles.securityVerifyRow}>
+                <View style={styles.securityRowInfo}>
+                  <Text style={styles.securityRowLabel}>Email</Text>
+                  <Text style={styles.securityRowValue} numberOfLines={1}>{user?.email || "Not set"}</Text>
+                </View>
+                {user?.email_verified !== false && (
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons name="shield-checkmark-outline" size={11} color={PRIMARY} />
+                    <Text style={styles.verifiedText}>Verified</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.securityVerifyRow}>
+                <View style={styles.securityRowInfo}>
+                  <Text style={styles.securityRowLabel}>Mobile</Text>
+                  <Text style={styles.securityRowValue} numberOfLines={1}>{user?.mobile || "Not set"}</Text>
+                </View>
+                {(!!user?.mobile_verified || !!user?.mobile_locked) && (
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons name="shield-checkmark-outline" size={11} color={PRIMARY} />
+                    <Text style={styles.verifiedText}>Verified</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Password row */}
+            <View style={styles.securityPwRow}>
+              <View style={styles.securityPwLeft}>
+                <View style={styles.securityPwIconBox}>
+                  <Ionicons name="key-outline" size={18} color={PRIMARY} />
+                </View>
+                <View>
+                  <Text style={styles.securityRowLabel}>Password</Text>
+                  <Text style={styles.securityRowValue}>
+                    {user?.has_password ? "Password set" : "No password set"}
+                  </Text>
+                </View>
+              </View>
+              {user?.has_password ? (
+                <TouchableOpacity
+                  style={styles.changeBtn}
+                  onPress={() => {
+                    // Scroll to Change Password section below
+                    showAlert({ type: "info", title: "Change Password", message: "Use the Change Password section below to update your password." });
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.changeBtnText}>Change Password</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.neonSmallBtn}
+                  onPress={() =>
+                    showAlert({ type: "info", title: "Create Password", message: "Use the Change Password section below to set a new password." })
+                  }
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.neonSmallBtnText}>Create Password</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Security footer — forgot + linked logins */}
+            <View style={styles.securityFooter}>
+              {user?.has_password && (
+                <TouchableOpacity
+                  onPress={() =>
+                    showAlert({ type: "info", title: "Forgot Password", message: "Use the web app to reset your password via email." })
+                  }
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.forgotLink}>Forgot Password?</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.securityMeta}>
+                Linked logins:{" "}
+                <Text style={{ color: "rgba(255,255,255,0.6)" }}>
+                  {(user?.auth_providers || []).join(", ") || "password"}
+                </Text>
+              </Text>
+              <Text style={[styles.securityMeta, { color: "rgba(255,255,255,0.25)" }]}>
+                Two-Factor Authentication · Active Sessions (coming soon)
+              </Text>
+            </View>
           </View>
 
           {/* ───── Goals ───── */}
@@ -553,7 +715,7 @@ export default function ProfileScreen({ navigation }) {
             />
           </View>
 
-          {/* ───── Save Profile — matches web neon-btn with glow shadow ───── */}
+          {/* ───── Save Profile ───── */}
           <TouchableOpacity
             style={[styles.saveBtn, saving && styles.saveBtnBusy]}
             onPress={handleSaveProfile}
@@ -644,6 +806,9 @@ export default function ProfileScreen({ navigation }) {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* ── AvatarStudio modal ── */}
+      <AvatarStudio visible={studioOpen} onClose={() => setStudioOpen(false)} />
+
       {/* ── Archetype picker modal ── */}
       <PickerModal
         visible={archetypePickerOpen}
@@ -669,12 +834,11 @@ export default function ProfileScreen({ navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-// Matching web's glass-strong and cf-input palette with translucent values
-const CARD_BG      = "rgba(10,10,10,0.9)";   // web: rgba(10,10,10,0.8)
-const CARD_BORDER  = "rgba(255,255,255,0.10)"; // web: border-white/10
-const INPUT_BG     = "rgba(255,255,255,0.03)"; // web: cf-input bg
-const INPUT_BORDER = "rgba(255,255,255,0.10)"; // web: cf-input border
-const LABEL_COLOR  = "rgba(255,255,255,0.45)"; // web: text-white/45
+const CARD_BG      = "rgba(10,10,10,0.9)";
+const CARD_BORDER  = "rgba(255,255,255,0.10)";
+const INPUT_BG     = "rgba(255,255,255,0.03)";
+const INPUT_BORDER = "rgba(255,255,255,0.10)";
+const LABEL_COLOR  = "rgba(255,255,255,0.45)";
 const TEXT_COLOR   = "#fff";
 
 const styles = StyleSheet.create({
@@ -724,7 +888,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  // ── Card — matches web glass-strong ─────────────────────────────────────
+  // ── Card ────────────────────────────────────────────────────────────────
   card: {
     backgroundColor: CARD_BG,
     borderRadius: 16,
@@ -734,7 +898,6 @@ const styles = StyleSheet.create({
     gap: 14,
   },
 
-  // Hero card with green glow — matches web absolute green blob + glass-strong
   heroCard: {
     borderColor: "rgba(57,255,20,0.18)",
     shadowColor: PRIMARY,
@@ -742,13 +905,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 4,
+    overflow: "hidden",
   },
 
   cardLast: {
     marginBottom: 0,
   },
 
-  // ── Section header — green pill chip matching all other screens ──────────
+  // ── Hero glow orb — matches web absolute -top-24 -right-24 blur-3xl ────
+  heroGlow: {
+    position: "absolute",
+    top: -60,
+    right: -60,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "rgba(57,255,20,0.10)",
+  },
+
+  // ── Section header chip ──────────────────────────────────────────────────
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -777,7 +952,14 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // Avatar — non-interactive, matches web w-20 h-20 rounded-full green circle
+  avatarWrap: {
+    width: 80,
+    height: 80,
+    flexShrink: 0,
+    position: "relative",
+  },
+
+  // Avatar circle — matches web w-20 h-20 rounded-full with neon glow
   avatar: {
     width: 80,
     height: 80,
@@ -790,7 +972,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 15,
     elevation: 8,
-    flexShrink: 0,
+  },
+
+  // Avatar image — same size, rounded
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 15,
+    elevation: 8,
   },
 
   avatarInitial: {
@@ -800,12 +993,26 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
+  // Camera button — matches web absolute -bottom-1 -right-1 w-8 h-8
+  cameraBtn: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#000",
+    borderWidth: 1,
+    borderColor: "rgba(57,255,20,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   identityInfo: {
     flex: 1,
     gap: 6,
   },
 
-  // Hero heading — matches web h1 font-black text-3xl tracking-tighter
   heroHeading: {
     color: TEXT_COLOR,
     fontSize: 26,
@@ -826,7 +1033,22 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // ── Goal progress ────────────────────────────────────────────────────────
+  // ── Goal Progress header ─────────────────────────────────────────────────
+  goalProgressHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  refreshLink: {
+    color: PRIMARY,
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+
+  // ── Goal Progress content ────────────────────────────────────────────────
   twoCol: {
     gap: 10,
   },
@@ -836,7 +1058,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  // GoalBar — matches web p-4 rounded-md border-white/10 bg-white/[0.02]
   goalBar: {
     backgroundColor: "rgba(255,255,255,0.02)",
     borderRadius: 8,
@@ -891,7 +1112,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
   },
 
-  // StatCard — matches web p-3 rounded-md border-white/10 bg-white/[0.02]
   statCard: {
     backgroundColor: "rgba(255,255,255,0.02)",
     borderRadius: 8,
@@ -930,7 +1150,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
-  // Field label — matches web font-mono text-[10px] tracking-[0.2em] uppercase text-white/45
   fieldLabel: {
     color: LABEL_COLOR,
     fontSize: 10,
@@ -940,7 +1159,13 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
 
-  // Input — matches web cf-input: bg-white/[0.03] border-white/10 rounded-lg 10px 12px 14px
+  fieldHint: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 14,
+  },
+
   input: {
     backgroundColor: INPUT_BG,
     borderWidth: 1,
@@ -953,14 +1178,69 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
   },
 
-  inputDisabled: {
-    color: "rgba(255,255,255,0.40)",
-    opacity: 0.6,
-  },
-
   inputMultiline: {
     minHeight: 72,
     paddingTop: 10,
+  },
+
+  // ── Protected field (email / mobile / timezone) ──────────────────────────
+  protectedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  protectedDisplay: {
+    flex: 1,
+    backgroundColor: INPUT_BG,
+    borderWidth: 1,
+    borderColor: INPUT_BORDER,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+
+  protectedValue: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    flex: 1,
+  },
+
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    flexShrink: 0,
+  },
+
+  verifiedText: {
+    color: PRIMARY,
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+
+  changeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    flexShrink: 0,
+  },
+
+  changeBtnText: {
+    color: "rgba(255,255,255,0.80)",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
 
   pickerTrigger: {
@@ -987,6 +1267,108 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.30)",
   },
 
+  // ── Security section ────────────────────────────────────────────────────
+  securityVerifyGrid: {
+    gap: 8,
+  },
+
+  securityVerifyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+
+  securityRowInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  securityRowLabel: {
+    color: "rgba(255,255,255,0.40)",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+
+  securityRowValue: {
+    color: TEXT_COLOR,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
+
+  securityPwRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+
+  securityPwLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+  },
+
+  securityPwIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "rgba(57,255,20,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+
+  neonSmallBtn: {
+    backgroundColor: PRIMARY,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexShrink: 0,
+  },
+
+  neonSmallBtnText: {
+    color: "#000",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+
+  securityFooter: {
+    gap: 6,
+  },
+
+  forgotLink: {
+    color: "rgba(57,255,20,0.80)",
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+  },
+
+  securityMeta: {
+    color: "rgba(255,255,255,0.40)",
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 16,
+  },
+
   // ── Password row ─────────────────────────────────────────────────────────
   pwRow: {
     flexDirection: "row",
@@ -1009,7 +1391,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
-  // ── Save button — matches web neon-btn with shadow-[0_0_40px_rgba(57,255,20,0.4)] ─
+  // ── Save button ──────────────────────────────────────────────────────────
   saveBtn: {
     backgroundColor: PRIMARY,
     borderRadius: 12,
@@ -1036,7 +1418,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  // ── Password button — matches web border-white/15 text-white/85 ──────────
+  // ── Password button ──────────────────────────────────────────────────────
   pwBtn: {
     borderRadius: 8,
     paddingVertical: 10,

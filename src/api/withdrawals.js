@@ -1,8 +1,11 @@
 import client from "./client";
 
 export const withdrawalsApi = {
-  summary: () =>
-    client.get("/withdrawals/summary"),
+  // GET /withdrawals/levels — level-based progression (replaces /withdrawals/summary)
+  // Returns: { verified_total, pending_total, pending_count, levels[], progress_to_next,
+  //            remaining_to_next, current_level, all_complete, mentor_eligible }
+  levels: () =>
+    client.get("/withdrawals/levels"),
 
   list: () =>
     client.get("/withdrawals"),
@@ -14,7 +17,4 @@ export const withdrawalsApi = {
 
   delete: (id) =>
     client.delete(`/withdrawals/${id}`),
-
-  setGoal: (amount) =>
-    client.put("/withdrawals/goal", { goal_amount: amount }),
 };

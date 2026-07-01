@@ -74,7 +74,7 @@ function FieldLabel({ label, children }) {
 }
 const fl = StyleSheet.create({
   wrap: { flex: 1 },
-  label: { color: "rgba(255,255,255,0.4)", fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 4 },
+  label: { color: "rgba(255,255,255,0.4)", fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 4 },
 });
 
 // ── InlinePicker — TouchableOpacity chip selector ─────────────────────────
@@ -366,7 +366,7 @@ export default function AutoJournalCard({ onImported, onNavigateToNew }) {
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: false,
       quality: 0.85,
     });

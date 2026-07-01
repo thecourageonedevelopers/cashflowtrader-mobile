@@ -229,7 +229,7 @@ function ChartPicker({ label, accentColor, asset, onPick }) {
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: false,
       quality: 0.85,
     });

@@ -28,5 +28,9 @@ export const profileApi = {
       headers: { "Content-Type": "multipart/form-data" },
     }),
 
+  // Mirrors web POST /profile/avatar-preset — set one of the preset CDN avatars
+  setAvatarPreset: (picture_url) =>
+    client.post("/profile/avatar-preset", { picture_url }),
+
   deleteAvatar: () => client.delete("/profile/avatar"),
 };

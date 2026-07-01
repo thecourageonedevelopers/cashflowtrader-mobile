@@ -30,7 +30,6 @@ const GLASS_BORDER = "rgba(255,255,255,0.08)";
 const GLASS_STRONG_BG = "rgba(10,10,10,0.9)";
 const GLASS_STRONG_BORDER = "rgba(255,255,255,0.1)";
 const AMBER = "#FBBF24";
-const BLUE = "#60A5FA";
 const RED = "#f87171";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,37 +72,6 @@ function MicroCard({ label, value, color }) {
   );
 }
 
-function Collapsible({ icon, iconColor, title, preview, children }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <View style={s.collapsible}>
-      <TouchableOpacity
-        style={s.collapsibleHeader}
-        onPress={() => setOpen((o) => !o)}
-        activeOpacity={0.7}
-      >
-        <View style={s.collapsibleTitleRow}>
-          <View style={[s.collapsibleIconBox, { borderColor: iconColor + "40", backgroundColor: iconColor + "12" }]}>
-            <Ionicons name={icon} size={16} color={iconColor} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.collapsibleTitle}>{title}</Text>
-            {!open && preview ? (
-              <Text style={s.collapsiblePreview} numberOfLines={1}>{preview}</Text>
-            ) : null}
-          </View>
-        </View>
-        <Ionicons
-          name={open ? "chevron-up" : "chevron-down"}
-          size={18}
-          color="rgba(255,255,255,0.4)"
-        />
-      </TouchableOpacity>
-      {open ? <View style={s.collapsibleBody}>{children}</View> : null}
-    </View>
-  );
-}
-
 function FilterChipBtn({ label, active, tone, onPress }) {
   const activeBg =
     tone === "green" ? PRIMARY : tone === "red" ? RED : "#fff";
@@ -119,222 +87,6 @@ function FilterChipBtn({ label, active, tone, onPress }) {
     >
       <Text style={[s.filterChipText, active && { color: activeText }]}>{label}</Text>
     </TouchableOpacity>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Markdown block (mirrors AiCoach.jsx MarkdownBlock)
-// ─────────────────────────────────────────────────────────────────────────────
-function MarkdownBlock({ text }) {
-  if (!text) return null;
-  const lines = text.split(/\r?\n/);
-  const blocks = [];
-  let bullets = [];
-  let ordered = [];
-
-  const flushBullets = () => {
-    if (bullets.length) { blocks.push({ type: "ul", items: [...bullets] }); bullets = []; }
-  };
-  const flushOrdered = () => {
-    if (ordered.length) { blocks.push({ type: "ol", items: [...ordered] }); ordered = []; }
-  };
-
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) { flushBullets(); flushOrdered(); continue; }
-    if (line.startsWith("## ") || line.startsWith("# ")) {
-      flushBullets(); flushOrdered();
-      blocks.push({ type: "h2", text: line.replace(/^#+\s+/, "") });
-    } else if (line.startsWith("- ") || line.startsWith("* ")) {
-      flushOrdered();
-      bullets.push(line.slice(2));
-    } else if (/^\d+\.\s/.test(line)) {
-      flushBullets();
-      ordered.push(line.replace(/^\d+\.\s/, ""));
-    } else {
-      flushBullets(); flushOrdered();
-      blocks.push({ type: "p", text: line });
-    }
-  }
-  flushBullets(); flushOrdered();
-
-  const renderText = (str) => str.replace(/\*\*(.+?)\*\*/g, "$1");
-
-  return (
-    <View style={{ gap: 8 }}>
-      {blocks.map((b, i) => {
-        if (b.type === "h2") {
-          return <Text key={i} style={s.mdH2}>{b.text}</Text>;
-        }
-        if (b.type === "ul") {
-          return (
-            <View key={i} style={{ gap: 6 }}>
-              {b.items.map((it, j) => (
-                <View key={j} style={s.mdBulletRow}>
-                  <View style={s.mdBulletDot} />
-                  <Text style={s.mdBody}>{renderText(it)}</Text>
-                </View>
-              ))}
-            </View>
-          );
-        }
-        if (b.type === "ol") {
-          return (
-            <View key={i} style={{ gap: 6 }}>
-              {b.items.map((it, j) => (
-                <View key={j} style={s.mdBulletRow}>
-                  <Text style={[s.mdBody, { color: PRIMARY, width: 20 }]}>
-                    {String(j + 1).padStart(2, "0")}
-                  </Text>
-                  <Text style={s.mdBody}>{renderText(it)}</Text>
-                </View>
-              ))}
-            </View>
-          );
-        }
-        return <Text key={i} style={s.mdBody}>{renderText(b.text)}</Text>;
-      })}
-    </View>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AI Coach section (embedded in Collapsible — mirrors AiCoach.jsx embedded mode)
-// ─────────────────────────────────────────────────────────────────────────────
-function AiCoachSection() {
-  const { showAlert } = useAlert();
-  const [period, setPeriod] = useState(30);
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-
-  const fetchCached = useCallback(async (days) => {
-    setLoading(true);
-    try {
-      const { data } = await journalApi.aiCoachReport(days);
-      setReport(data?.exists ? data : null);
-    } catch {
-      setReport(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => { fetchCached(period); }, [period, fetchCached]);
-
-  const generate = async () => {
-    setGenerating(true);
-    try {
-      const { data } = await journalApi.generateAiCoachReport(period);
-      setReport({ exists: true, ...data });
-    } catch (e) {
-      showAlert({ type: "error", title: "Error", message: e?.response?.data?.detail || "AI coach is unavailable right now." });
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const totals = report?.stats?.totals;
-
-  return (
-    <View style={{ gap: 12 }}>
-      <Text style={s.coachHint}>
-        Pick a window and generate a deep-dive on what&apos;s leaking, what&apos;s working, and the exact rules to follow next.
-      </Text>
-
-      {/* Period picker */}
-      <View style={s.periodRow}>
-        {[7, 30, 60, 90].map((p) => (
-          <TouchableOpacity
-            key={p}
-            style={[s.periodBtn, period === p && s.periodBtnActive]}
-            onPress={() => setPeriod(p)}
-          >
-            <Text style={[s.periodBtnText, period === p && s.periodBtnTextActive]}>{p}d</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Generate button */}
-      <TouchableOpacity
-        style={[s.neonBtn, generating && { opacity: 0.5 }]}
-        onPress={generate}
-        disabled={generating}
-      >
-        <Ionicons
-          name={generating ? "time-outline" : report?.exists ? "refresh-outline" : "sparkles-outline"}
-          size={15}
-          color="#000"
-          style={{ marginRight: 6 }}
-        />
-        <Text style={s.neonBtnText}>
-          {generating ? "Coach is thinking..." : report?.exists ? "Regenerate Report" : "Generate AI Report"}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Tilt warning */}
-      {report?.tilt_warning ? (
-        <View style={s.tiltWarning}>
-          <Ionicons name="warning-outline" size={16} color={AMBER} />
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={s.tiltTitle}>TILT WATCH</Text>
-            <Text style={s.tiltBody}>{report.tilt_warning}</Text>
-          </View>
-        </View>
-      ) : null}
-
-      {/* Body */}
-      {loading ? (
-        <Text style={s.loadingMono}>Loading...</Text>
-      ) : !report?.exists ? (
-        <View style={s.coachEmpty}>
-          <Ionicons name="analytics-outline" size={28} color="rgba(57,255,20,0.6)" />
-          <Text style={s.coachEmptyTitle}>
-            No report yet for{" "}
-            <Text style={{ color: PRIMARY }}>last {period} days</Text>.
-          </Text>
-          <Text style={s.coachEmptyHint}>
-            Tap Generate AI Report and your coach will analyze every trade, every emotion, every mistake — then ship a plan for next week.
-          </Text>
-        </View>
-      ) : (
-        <View style={{ gap: 12 }}>
-          {/* Stat strip */}
-          {totals && totals.trades > 0 ? (
-            <View style={s.statStrip}>
-              {[
-                { label: "Trades", val: String(totals.trades), accent: false, bad: false },
-                { label: "Win Rate", val: `${totals.win_rate_pct}%`, accent: true, bad: false },
-                { label: "Net P&L", val: formatMoney(totals.net_pnl, "INR", { showSign: true }), accent: totals.net_pnl >= 0, bad: totals.net_pnl < 0 },
-                { label: "R:R", val: totals.risk_reward_ratio || "—", accent: false, bad: false },
-              ].map((st) => (
-                <View
-                  key={st.label}
-                  style={[
-                    s.statPill,
-                    st.bad && { borderColor: RED + "50", backgroundColor: RED + "0D" },
-                    st.accent && !st.bad && { borderColor: PRIMARY + "50", backgroundColor: PRIMARY + "0D" },
-                  ]}
-                >
-                  <Text style={s.statPillLabel}>{st.label}</Text>
-                  <Text style={[s.statPillVal, st.bad && { color: RED }, st.accent && !st.bad && { color: PRIMARY }]}>
-                    {st.val}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-
-          <MarkdownBlock text={report.report_markdown} />
-
-          {report.generated_at ? (
-            <Text style={s.generatedAt}>
-              Generated {new Date(report.generated_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-            </Text>
-          ) : null}
-        </View>
-      )}
-    </View>
   );
 }
 
@@ -665,84 +417,6 @@ export default function JournalScreen({ navigation }) {
               <MicroCard label="BEST MARKET" value={stats.best_market || "—"} color={PRIMARY} />
             </View>
 
-            {/* Collapsibles */}
-            <View style={s.collapsiblesBlock}>
-              {/* Weekly AI Snapshot */}
-              <Collapsible
-                icon="sparkles-outline"
-                iconColor={PRIMARY}
-                title="Weekly AI Snapshot"
-                preview={stats.weekly?.report || "Log more trades to unlock"}
-              >
-                <Text style={s.weeklyReport}>
-                  {stats.weekly?.report || "Log more trades to unlock your weekly snapshot."}
-                </Text>
-                {stats.weekly?.trades > 0 ? (
-                  <View style={s.miniGrid}>
-                    {[
-                      { l: "Trades", v: stats.weekly.trades, tone: "white" },
-                      { l: "Win Rate", v: `${stats.weekly.win_rate}%`, tone: stats.weekly.win_rate >= 50 ? "neon" : "white" },
-                      { l: "Net P&L", v: formatMoney(stats.weekly.net_pnl, "INR", { showSign: true }), tone: stats.weekly.net_pnl >= 0 ? "neon" : "red" },
-                    ].map((cell) => (
-                      <View key={cell.l} style={s.miniCell}>
-                        <Text style={s.miniLabel}>{cell.l}</Text>
-                        <Text style={[s.miniVal, cell.tone === "neon" && { color: PRIMARY }, cell.tone === "red" && { color: RED }]}>
-                          {String(cell.v)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-                <Text style={s.weeklyHint}>
-                  For 7d / 30d / 60d / 90d reports → open AI Trading Coach below
-                </Text>
-              </Collapsible>
-
-              {/* Pattern Detection */}
-              <Collapsible
-                icon="analytics-outline"
-                iconColor={BLUE}
-                title="Pattern Detection"
-                preview={
-                  stats.patterns?.length
-                    ? `${stats.patterns.length} pattern${stats.patterns.length > 1 ? "s" : ""} detected`
-                    : "Patterns emerge after 3+ trades"
-                }
-              >
-                {!stats.patterns?.length ? (
-                  <Text style={s.emptyHint}>Patterns emerge after 3+ trades with shared tags.</Text>
-                ) : (
-                  <View style={{ gap: 8 }}>
-                    {stats.patterns.map((p, i) => (
-                      <View key={i} style={s.patternRow}>
-                        <View style={s.patternDot} />
-                        <Text style={s.patternText}>{p.message}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-                {stats.recommendations?.length > 0 ? (
-                  <View style={{ marginTop: 12 }}>
-                    <Text style={s.recTitle}>RECOMMENDATIONS</Text>
-                    <View style={{ gap: 4, marginTop: 6 }}>
-                      {stats.recommendations.map((r, i) => (
-                        <Text key={i} style={s.recItem}>· {r}</Text>
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-              </Collapsible>
-
-              {/* AI Trading Coach */}
-              <Collapsible
-                icon="chatbubble-ellipses-outline"
-                iconColor={PRIMARY}
-                title="AI Trading Coach"
-                preview="GPT deep-dive on 7d / 30d / 60d / 90d performance"
-              >
-                <AiCoachSection />
-              </Collapsible>
-            </View>
           </>
         ) : null}
 
@@ -815,6 +489,9 @@ export default function JournalScreen({ navigation }) {
                   <Text style={dateTo ? s.dateButtonText : s.dateButtonPlaceholder}>
                     {dateTo || "To date"}
                   </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.filterApplyBtn} onPress={() => refetchEntries()}>
+                  <Ionicons name="funnel-outline" size={16} color="rgba(255,255,255,0.8)" />
                 </TouchableOpacity>
               </>
             )}
@@ -1174,270 +851,6 @@ const s = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Collapsibles
-  collapsiblesBlock: { gap: 10, marginBottom: 10 },
-  collapsible: {
-    backgroundColor: GLASS_STRONG_BG,
-    borderWidth: 1,
-    borderColor: GLASS_STRONG_BORDER,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  collapsibleHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-  },
-  collapsibleTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 8,
-  },
-  collapsibleIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  collapsibleTitle: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  collapsiblePreview: {
-    color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    marginTop: 2,
-  },
-  collapsibleBody: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-
-  // Weekly AI section
-  weeklyReport: {
-    color: "#fff",
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  weeklyHint: {
-    color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginTop: 12,
-  },
-  miniGrid: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  miniCell: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    borderRadius: 8,
-    padding: 10,
-  },
-  miniLabel: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  miniVal: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    marginTop: 4,
-  },
-
-  // Pattern detection
-  patternRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  patternDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: PRIMARY,
-    marginTop: 7,
-  },
-  patternText: {
-    flex: 1,
-    color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  recTitle: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  recItem: {
-    color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  // AI Coach section
-  coachHint: {
-    color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  periodRow: {
-    flexDirection: "row",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: 8,
-    padding: 4,
-    alignSelf: "flex-start",
-  },
-  periodBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  periodBtnActive: { backgroundColor: PRIMARY },
-  periodBtnText: {
-    color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    letterSpacing: 1.8,
-    textTransform: "uppercase",
-  },
-  periodBtnTextActive: { color: "#000" },
-  tiltWarning: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    padding: 14,
-    borderWidth: 1,
-    borderColor: AMBER + "66",
-    backgroundColor: AMBER + "0D",
-    borderRadius: 8,
-  },
-  tiltTitle: {
-    color: "rgba(251,191,36,0.8)",
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  tiltBody: {
-    color: "#fef3c7",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 2,
-  },
-  coachEmpty: {
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: 10,
-    padding: 24,
-    alignItems: "center",
-    gap: 8,
-  },
-  coachEmptyTitle: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    textAlign: "center",
-  },
-  coachEmptyHint: {
-    color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    textAlign: "center",
-    lineHeight: 20,
-    maxWidth: 280,
-  },
-  statStrip: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  statPill: {
-    flex: 1,
-    minWidth: "40%",
-    backgroundColor: "rgba(255,255,255,0.02)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    borderRadius: 8,
-    padding: 10,
-  },
-  statPillLabel: {
-    color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  statPillVal: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
-    fontSize: 15,
-    marginTop: 2,
-  },
-  generatedAt: {
-    color: "rgba(255,255,255,0.35)",
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 1.8,
-    textTransform: "uppercase",
-  },
-
-  // Markdown
-  mdH2: {
-    color: PRIMARY,
-    fontFamily: "Inter_900Black",
-    fontSize: 14,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginTop: 4,
-  },
-  mdBody: {
-    flex: 1,
-    color: "rgba(255,255,255,0.8)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  mdBulletRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  mdBulletDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: PRIMARY,
-    marginTop: 7,
-  },
-
   // Filters
   filterCard: {
     backgroundColor: GLASS_BG,
@@ -1490,6 +903,15 @@ const s = StyleSheet.create({
     color: "rgba(255,255,255,0.2)",
     fontFamily: "Inter_400Regular",
     fontSize: 13,
+  },
+  filterApplyBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   pickerOverlay: {
     flex: 1,
@@ -1689,13 +1111,6 @@ const s = StyleSheet.create({
     letterSpacing: -0.5,
     textAlign: "center",
   },
-  emptyHint: {
-    color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
   // Trade cards
   cardList: { gap: 12, marginTop: 4 },
   tradeCard: {

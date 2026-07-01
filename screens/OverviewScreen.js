@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Image,
   StyleSheet,
   Platform,
   useWindowDimensions,
@@ -16,9 +17,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import ScreenLayout from "../components/common/ScreenLayout";
+import AvatarStudio from "../components/common/AvatarStudio";
 import { PRIMARY, authBaseStyles } from "../components/auth/AuthStyles";
 import { useAuth } from "../src/hooks/useAuth";
 import { useMoney } from "../src/hooks/useMoney";
+import { useAvatarUrl } from "../src/lib/avatar";
 import { progressApi } from "../src/api/progress";
 import { profileApi } from "../src/api/profile";
 import { journalApi } from "../src/api/journal";
@@ -272,6 +275,10 @@ export default function OverviewScreen({ navigation }) {
   const [busy, setBusy] = useState(null);
   const [ready, setReady] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
+
+  // Resolves user.picture to a displayable URL (async token-auth for uploaded pics)
+  const avatarUrl = useAvatarUrl(user?.picture);
 
   // ─── Queries ─────────────────────────────────────────────────────────────
 
@@ -410,6 +417,10 @@ export default function OverviewScreen({ navigation }) {
   const weeklyWinRate = goalProgress?.weekly?.win_rate ?? 0;
   const monthlyWinRate = goalProgress?.monthly?.win_rate ?? 0;
   const totalTrades = analytics?.total_trades ?? 0;
+
+  // Performance · Report Card — exact web mapping (analytics first, goalProgress fallback)
+  const perfNetPnL = analytics?.net_pnl ?? goalProgress?.monthly?.net_pnl ?? 0;
+  const perfWinRate = analytics?.win_rate ?? 0;
   const pendingCount = Array.isArray(pending) ? pending.length : 0;
 
   // Date
@@ -483,11 +494,11 @@ export default function OverviewScreen({ navigation }) {
               <View style={styles.heroActions}>
                 <TouchableOpacity style={styles.heroPrimary} onPress={() => navigation.navigate("ChallengeScreen")}>
                   <Ionicons name="calendar-outline" size={17} color="#000" />
-                  <Text style={styles.heroPrimaryText}>Continue 21-Day Challenge</Text>
+                  <Text style={styles.heroPrimaryText}>Start 21-Day Challenge</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.heroSecondary} onPress={() => navigation.navigate("JournalScreen")}>
-                  <Ionicons name="stats-chart-outline" size={17} color="#fff" />
-                  <Text style={styles.heroSecondaryText}>Trading AI</Text>
+                  <Ionicons name="scan-outline" size={17} color="#fff" />
+                  <Text style={styles.heroSecondaryText}>Auto Journal</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -510,9 +521,32 @@ export default function OverviewScreen({ navigation }) {
 
             {/* Avatar + Name/Archetype — flex row matching web */}
             <View style={styles.identityAvatarRow}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarLetter}>{avatarInitial}</Text>
-              </View>
+              {/*
+                Mirrors web TraderIdentity avatar button:
+                  - Shows profile picture if user.picture is set (resolved via useAvatarUrl)
+                  - Falls back to initial letter
+                  - Tap opens AvatarStudio (same as web onClick → setStudioOpen(true))
+                  - Camera icon overlay on press-in (web uses group-hover:opacity-100)
+              */}
+              <TouchableOpacity
+                style={styles.avatarCircle}
+                onPress={() => setStudioOpen(true)}
+                activeOpacity={0.85}
+              >
+                {avatarUrl ? (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={styles.avatarImg}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={styles.avatarLetter}>{avatarInitial}</Text>
+                )}
+                {/* Camera overlay — always present, semi-transparent; matches web Camera icon overlay */}
+                <View style={styles.avatarOverlay}>
+                  <Ionicons name="camera-outline" size={18} color={PRIMARY} />
+                </View>
+              </TouchableOpacity>
               <View style={styles.identityNameBlock}>
                 <Text style={styles.identityName} numberOfLines={1}>{user?.name || "Trader"}</Text>
                 <View style={styles.archetypeBadge}>
@@ -1006,22 +1040,29 @@ export default function OverviewScreen({ navigation }) {
               </View>
               <TouchableOpacity onPress={() => navigation.navigate("JournalScreen")} style={styles.openLink}>
                 <Text style={styles.perfLink}>Full analytics</Text>
-                <Ionicons name="arrow-forward" size={12} color="rgba(255,255,255,0.50)" />
+                <Ionicons name="arrow-forward" size={12} color={PRIMARY} />
               </TouchableOpacity>
             </View>
 
-            {/* 3 main stats — matching web PerfStat components */}
+            {/* 3 main stats — one per row, matching web PerfStat (analytics data source) */}
             <View style={styles.perfStats}>
               <View style={styles.perfStatCell}>
-                <Text style={styles.perfStatValue}>{money(monthlyPnL, { showSign: true })}</Text>
+                <Text
+                  style={[styles.perfStatValue, { color: perfNetPnL >= 0 ? PRIMARY : "#f87171" }]}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                  minimumFontScale={0.5}
+                >
+                  {money(perfNetPnL, { showSign: true })}
+                </Text>
                 <Text style={styles.perfStatLabel}>Net P&L</Text>
               </View>
               <View style={styles.perfStatCell}>
-                <Text style={styles.perfStatValue}>{Math.round(monthlyWinRate)}%</Text>
+                <Text style={styles.perfStatValue} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.5}>{perfWinRate}%</Text>
                 <Text style={styles.perfStatLabel}>Win Rate</Text>
               </View>
               <View style={styles.perfStatCell}>
-                <Text style={styles.perfStatValue}>{totalTrades}</Text>
+                <Text style={styles.perfStatValue} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.5}>{totalTrades}</Text>
                 <Text style={styles.perfStatLabel}>Trades Logged</Text>
               </View>
             </View>
@@ -1106,6 +1147,12 @@ export default function OverviewScreen({ navigation }) {
 
         </ScrollView>
       </ScreenLayout>
+
+      {/* AvatarStudio modal — rendered outside ScrollView so it overlays everything */}
+      <AvatarStudio
+        visible={studioOpen}
+        onClose={() => setStudioOpen(false)}
+      />
     </Animated.View>
   );
 }
@@ -1205,8 +1252,25 @@ const styles = StyleSheet.create({
     shadowColor: PRIMARY, shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.45, shadowRadius: 16, elevation: 8,
     flexShrink: 0,
+    overflow: "hidden",
   },
   avatarLetter: { color: "#000", fontSize: 28, fontFamily: "Inter_900Black" },
+  // Profile picture — fills the avatar circle when user.picture is set
+  avatarImg: {
+    width: 64, height: 64, borderRadius: 16,
+  },
+  // Camera overlay — matches web: absolute inset-0 grid place-items-center bg-black/55
+  avatarOverlay: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: "rgba(0,0,0,0.72)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   identityNameBlock: { flex: 1 },
   identityName: { color: "#fff", fontSize: 26, fontFamily: "Inter_900Black", letterSpacing: -0.5, marginBottom: 8, lineHeight: 30 },
   archetypeBadge: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: "rgba(57,255,20,0.12)", borderWidth: 1, borderColor: "rgba(57,255,20,0.45)" },
@@ -1250,17 +1314,17 @@ const styles = StyleSheet.create({
   strongerLabel: { color: "rgba(57,255,20,0.75)", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 2, textAlign: "right" },
   daysGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 4 },
   dayPip: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#111", borderWidth: 1, borderColor: "#222", justifyContent: "center", alignItems: "center" },
-  dayPipDone: { backgroundColor: PRIMARY, borderColor: "rgba(57,255,20,0.55)", shadowColor: PRIMARY, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8, elevation: 6 },
+  dayPipDone: { backgroundColor: "rgba(57,255,20,0.20)", borderColor: PRIMARY },
   dayPipCurrent: { borderColor: "rgba(57,255,20,0.55)", backgroundColor: "rgba(57,255,20,0.08)" },
   dayPipText: { color: "#666", fontFamily: "Inter_700Bold", fontSize: 11 },
-  dayPipTextDone: { color: "#000" },
+  dayPipTextDone: { color: PRIMARY },
   dayPipTextCurrent: { color: PRIMARY },
   stagesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
-  stageBox: { flex: 1, minWidth: "22%", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#1c1c1c", backgroundColor: "rgba(255,255,255,0.02)", alignItems: "center" },
-  stageBoxActive: { borderColor: "rgba(57,255,20,0.55)", backgroundColor: "rgba(57,255,20,0.08)" },
-  stageBoxDone: { borderColor: "rgba(57,255,20,0.20)", backgroundColor: "rgba(57,255,20,0.03)" },
-  stageDayRange: { color: "#555", fontSize: 8, fontFamily: "Inter_700Bold", letterSpacing: 1, marginBottom: 2 },
-  stageLabel: { color: "#444", fontSize: 10, fontFamily: "Inter_700Bold", textAlign: "center" },
+  stageBox: { width: "48%", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#1c1c1c", backgroundColor: "rgba(255,255,255,0.02)", alignItems: "center" },
+  stageBoxActive: { borderColor: "rgba(57,255,20,0.60)", backgroundColor: "rgba(57,255,20,0.10)" },
+  stageBoxDone: { borderColor: "rgba(57,255,20,0.25)", backgroundColor: "rgba(57,255,20,0.04)" },
+  stageDayRange: { color: "rgba(255,255,255,0.40)", fontSize: 8, fontFamily: "Inter_700Bold", letterSpacing: 1.1, marginBottom: 2, textTransform: "uppercase" },
+  stageLabel: { color: "rgba(255,255,255,0.45)", fontSize: 10, fontFamily: "Inter_700Bold", textAlign: "center", lineHeight: 14, marginTop: 2 },
 
   // ── Today's Mission ───────────────────────────────────────────────────────
   missionCount: { color: PRIMARY, fontFamily: "Inter_900Black", fontSize: 22, lineHeight: 26 },
@@ -1372,20 +1436,19 @@ const styles = StyleSheet.create({
   joinBtnEnded: { borderColor: "#1c1c1c" },
   joinBtnText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 13 },
 
-  // ── Performance Analytics (ROW 6, secondary/muted — matches web opacity-70) ─
+  // ── Performance Analytics (ROW 6 — glass-strong, matches web exactly) ─
   perfSection: {
-    opacity: 0.70,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "rgba(255,255,255,0.02)",
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.03)",
     padding: 24,
   },
-  perfLink: { color: "rgba(255,255,255,0.50)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1 },
-  perfStats: { flexDirection: "row", gap: 8, marginTop: 0, marginBottom: 12 },
-  perfStatCell: { flex: 1, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", backgroundColor: "rgba(0,0,0,0.30)", alignItems: "center" },
-  perfStatValue: { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_700Bold", fontSize: 24, marginBottom: 4 },
-  perfStatLabel: { color: "rgba(255,255,255,0.35)", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 1.8, textAlign: "center", textTransform: "uppercase" },
+  perfLink: { color: PRIMARY, fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1.8, textTransform: "uppercase" },
+  perfStats: { flexDirection: "column", gap: 10, marginTop: 0, marginBottom: 12 },
+  perfStatCell: { paddingHorizontal: 20, paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.03)", alignItems: "center" },
+  perfStatValue: { color: "#fff", fontFamily: "Inter_900Black", fontSize: 26, lineHeight: 32, marginBottom: 2 },
+  perfStatLabel: { color: "rgba(255,255,255,0.50)", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 1.4, textAlign: "center", textTransform: "uppercase", marginTop: 6 },
   perfFooter: { color: "rgba(255,255,255,0.30)", fontFamily: "Inter_400Regular", fontSize: 10, lineHeight: 16 },
   perfExtraLabel: { color: "#555", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 2, marginBottom: 6 },
   perfGoalCard: { marginBottom: 12 },

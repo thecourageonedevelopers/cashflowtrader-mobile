@@ -6,11 +6,12 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { journalApi } from "../src/api/journal";
 import { tokenService } from "../src/services/tokenService";
 import { formatDate, formatMoney, moneyColor } from "../src/utils/format";
@@ -243,18 +244,26 @@ export default function TradeDetailScreen({ navigation, route }) {
   };
 
   const downloadPdf = async () => {
-    // Opens the PDF in the device browser. The server accepts ?auth=<token>
-    // for file endpoints; the PDF endpoint uses the same pattern.
-    // Install expo-file-system + expo-sharing for an in-app download UX.
     setDownloading(true);
     try {
       const t = token || (await tokenService.get()) || "";
-      const url = `${API_URL}/api/journal/${entry.entry_id}/pdf?auth=${encodeURIComponent(t)}`;
-      const supported = await Linking.canOpenURL(url);
-      if (!supported) throw new Error("Cannot open URL");
-      await Linking.openURL(url);
+      const url = `${API_URL}/api/journal/${entry.entry_id}/pdf`;
+      const dest = new File(Paths.cache, `trade-${entry.entry_id}.pdf`);
+      const downloaded = await File.downloadFileAsync(url, dest, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        showAlert({ type: "success", title: "Downloaded", message: `PDF saved.` });
+        return;
+      }
+      await Sharing.shareAsync(downloaded.uri, {
+        mimeType: "application/pdf",
+        dialogTitle: `trade-${entry.entry_id}.pdf`,
+        UTI: "com.adobe.pdf",
+      });
     } catch {
-      showAlert({ type: "error", title: "Error", message: "Could not open PDF. Try from the web app." });
+      showAlert({ type: "error", title: "Error", message: "Could not download PDF." });
     } finally {
       setDownloading(false);
     }
@@ -586,7 +595,7 @@ const s = StyleSheet.create({
   },
   detailStat: {
     flex: 1,
-    minWidth: "40%",
+    minWidth: 0,
     backgroundColor: "rgba(255,255,255,0.03)",
     borderWidth: 1,
     borderColor: GLASS_BORDER,
