@@ -334,6 +334,19 @@ export default function OverviewScreen({ navigation }) {
     return () => pulseLoopRef.current?.stop();
   }, []);
 
+  // Day-pip pulse — matches web `animate-pulse 2s` (opacity 1→0.5→1 infinite)
+  const dayPipPulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(dayPipPulseAnim, { toValue: 0.5, duration: 1000, useNativeDriver: true }),
+        Animated.timing(dayPipPulseAnim, { toValue: 1,   duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [dayPipPulseAnim]);
+
   useEffect(() => {
     if (!progressLoading && !dashboardLoading && !ready) {
       pulseLoopRef.current?.stop();
@@ -694,21 +707,23 @@ export default function OverviewScreen({ navigation }) {
             {/* Day pips grid (21 squares, matching web grid-cols-7 sm:grid-cols-21) */}
             <View style={styles.daysGrid}>
               {DAYS.map((day) => {
-                const done = completedDaysSet.has(day);
+                // Web: done = day <= t.completed_days (numeric comparison)
+                const done = parseInt(day, 10) <= (dbTransform?.completed_days ?? 0);
                 const current = parseInt(day, 10) === challengeDay;
+                if (current && !done) {
+                  // animate-pulse: opacity 1→0.5→1 over 2s (matches web CSS animate-pulse)
+                  return (
+                    <Animated.View
+                      key={day}
+                      style={[styles.dayPip, styles.dayPipCurrent, { opacity: dayPipPulseAnim }]}
+                    >
+                      <Text style={[styles.dayPipText, styles.dayPipTextCurrent]}>{day}</Text>
+                    </Animated.View>
+                  );
+                }
                 return (
-                  <View key={day} style={[
-                    styles.dayPip,
-                    done && styles.dayPipDone,
-                    current && !done && styles.dayPipCurrent,
-                  ]}>
-                    <Text style={[
-                      styles.dayPipText,
-                      done && styles.dayPipTextDone,
-                      current && !done && styles.dayPipTextCurrent,
-                    ]}>
-                      {day}
-                    </Text>
+                  <View key={day} style={[styles.dayPip, done && styles.dayPipDone]}>
+                    <Text style={[styles.dayPipText, done && styles.dayPipTextDone]}>{day}</Text>
                   </View>
                 );
               })}
@@ -1318,7 +1333,7 @@ const styles = StyleSheet.create({
   dayPipCurrent: { borderColor: "rgba(57,255,20,0.55)", backgroundColor: "rgba(57,255,20,0.08)" },
   dayPipText: { color: "#666", fontFamily: "Inter_700Bold", fontSize: 11 },
   dayPipTextDone: { color: PRIMARY },
-  dayPipTextCurrent: { color: PRIMARY },
+  dayPipTextCurrent: { color: "#fff" },
   stagesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
   stageBox: { width: "48%", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#1c1c1c", backgroundColor: "rgba(255,255,255,0.02)", alignItems: "center" },
   stageBoxActive: { borderColor: "rgba(57,255,20,0.60)", backgroundColor: "rgba(57,255,20,0.10)" },

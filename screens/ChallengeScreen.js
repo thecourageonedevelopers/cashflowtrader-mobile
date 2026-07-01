@@ -22,6 +22,8 @@ import { useAuth } from "../src/hooks/useAuth";
 import { challengeApi } from "../src/api/challenge";
 import { uploadApi } from "../src/api/upload";
 import { useAlert } from "../src/context/AlertContext";
+import ChallengeLanding from "../components/challenge/ChallengeLanding";
+import PushFormModal from "../components/challenge/PushFormModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -89,7 +91,6 @@ export default function ChallengeScreen({ navigation }) {
   const { showAlert, showConfirm } = useAlert();
   const qc = useQueryClient();
   const [activeLesson, setActiveLesson] = useState(null);
-  const [buyBusy, setBuyBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   // Pulse animation for current day card
@@ -124,38 +125,6 @@ export default function ChallengeScreen({ navigation }) {
     setRefreshing(false);
   }, [refetch]);
 
-  // ── Purchase / payment flow ────────────────────────────────────────────────
-  const handleBuy = async () => {
-    setBuyBusy(true);
-    try {
-      const order = await challengeApi.createOrder().then((r) => r.data);
-      if (order.mock) {
-        await challengeApi.verifyPayment(
-          order.order_id,
-          `pay_mock_${Date.now()}`,
-          "mock_signature"
-        );
-        showAlert({ type: "success", title: "Success", message: "Payment successful (test mode). Challenge unlocked." });
-        await checkAuth();
-        await refetch();
-        return;
-      }
-      // Real Razorpay: react-native-razorpay is not installed.
-      // Open the Razorpay checkout page via WebBrowser.
-      if (order.checkout_url) {
-        await WebBrowser.openBrowserAsync(order.checkout_url);
-        await checkAuth();
-        await refetch();
-      } else {
-        showAlert({ type: "info", title: "Complete Purchase", message: "Visit cashflowtrader.in to complete your purchase, then return to the app." });
-      }
-    } catch (e) {
-      showAlert({ type: "error", title: "Error", message: e?.response?.data?.detail || "Could not start payment" });
-    } finally {
-      setBuyBusy(false);
-    }
-  };
-
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -168,6 +137,18 @@ export default function ChallengeScreen({ navigation }) {
   }
 
   if (!data) return null;
+
+  // Mirror web: if not purchased → show dedicated landing page
+  if (!data.unlocked) {
+    return (
+      <ScreenLayout screenName="ChallengeScreen" navigation={navigation}>
+        <ChallengeLanding
+          data={data}
+          onPurchased={async () => { await checkAuth(); await refetch(); }}
+        />
+      </ScreenLayout>
+    );
+  }
 
   // ── Derived values (mirrors web exactly) ──────────────────────────────────
   const ip = data.item_progress || {};
@@ -315,31 +296,6 @@ export default function ChallengeScreen({ navigation }) {
           </View>
         )}
 
-        {/* STATE C: Purchase pitch */}
-        {!data.unlocked && (
-          <View style={styles.glassDark}>
-            <View style={styles.todayCardOrb} />
-            <Text style={styles.todayChip}>The cost of staying stuck</Text>
-            <Text style={[styles.todayTitle, { marginTop: 8, marginBottom: 4 }]}>
-              21 days. One decision.{"\n"}
-              <Text style={[styles.heroH1Green, { fontSize: 26 }]}>
-                ₹{(data.price_inr || 0).toLocaleString("en-IN")}.
-              </Text>
-            </Text>
-            <Text style={styles.todayCopy}>
-              Less than the next account you'll blow without a system. Unlock once — it's yours for life.
-            </Text>
-            <TouchableOpacity
-              style={[styles.neonBtn, { marginTop: 16 }]}
-              onPress={handleBuy}
-              disabled={buyBusy}
-            >
-              <Text style={styles.neonBtnText}>{buyBusy ? "Processing..." : "Begin Transformation"}</Text>
-              <Ionicons name="sparkles" size={16} color="#000" />
-            </TouchableOpacity>
-            <Text style={styles.pitchCaption}>Lifetime access · No subscription</Text>
-          </View>
-        )}
 
         {/* ══════════════════════════════════════════════════════════════════
             STATS STRIP [if unlocked] — 2×2 grid matching web grid-cols-4
@@ -588,6 +544,9 @@ export default function ChallengeScreen({ navigation }) {
           onChanged={refetch}
         />
       )}
+
+      {/* PushFormModal — global overlay equivalent (web: DashboardLayout) */}
+      <PushFormModal />
 
     </ScreenLayout>
   );
