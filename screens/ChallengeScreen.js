@@ -25,6 +25,7 @@ import { uploadApi } from "../src/api/upload";
 import { useAlert } from "../src/context/AlertContext";
 import ChallengeLanding from "../components/challenge/ChallengeLanding";
 import PushFormModal from "../components/challenge/PushFormModal";
+import AmbientGlow from "../components/common/AmbientGlow";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -244,9 +245,9 @@ export default function ChallengeScreen({ navigation }) {
 
         {/* STATE A: Today's move */}
         {data.unlocked && currentLesson && (
-          <Animated.View style={[styles.todayCard, { borderColor: "rgba(57,255,20,0.55)", opacity: pulseAnim }]}>
-            {/* Decor orb */}
-            <View style={styles.todayCardOrb} />
+          <Animated.View style={[styles.todayCard, { opacity: pulseAnim }]}>
+            {/* Ambient glow — SVG radial gradient from top-right corner, matching web blur-3xl orb */}
+            <AmbientGlow position="topRight" size={180} opacity={0.08} color={PRIMARY} />
             {/* Chip */}
             <View style={styles.row}>
               <Ionicons name="flash-outline" size={11} color={PRIMARY} />
@@ -1219,12 +1220,11 @@ const styles = StyleSheet.create({
   todayCard: {
     backgroundColor: GLASS_BG,
     borderWidth: 1.5,
-    borderColor: "rgba(57,255,20,0.55)",
+    borderColor: "rgba(57,255,20,0.60)",
     borderRadius: 18,
     padding: 20,
     overflow: "hidden",
   },
-  todayCardOrb:  { position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: 65, backgroundColor: PRIMARY, opacity: 0.06 },
   todayChip:     { color: PRIMARY, fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2 },
   todayDayNum:   { color: PRIMARY, fontFamily: MONO.bold, fontSize: 58, lineHeight: 62, textShadowColor: "rgba(57,255,20,0.45)", textShadowRadius: 12 },
   todayDayOf:    { color: "rgba(255,255,255,0.35)", fontFamily: DISPLAY.regular, fontSize: 16, marginBottom: 8 },
@@ -1266,7 +1266,7 @@ const styles = StyleSheet.create({
   statLabel:    { color: "rgba(255,255,255,0.55)", fontFamily: MONO.regular, fontSize: 8, letterSpacing: 2, marginTop: 6, lineHeight: 13 },
   statSub:      { color: "rgba(255,255,255,0.40)", fontFamily: BODY.regular, fontSize: 9, lineHeight: 14, marginTop: 4 },
   statIconWrap: { position: "relative", alignItems: "center", justifyContent: "center" },
-  statIconGlow: { position: "absolute", width: 48, height: 48, borderRadius: 24, opacity: 0.20 },
+  statIconGlow: { position: "absolute", width: 60, height: 60, borderRadius: 30, opacity: 0.25 },
 
   // ── Transformation bar ────────────────────────────────────────────────────
   barLabel:     { color: "rgba(255,255,255,0.50)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2 },
@@ -1287,8 +1287,8 @@ const styles = StyleSheet.create({
   // ── Day list ──────────────────────────────────────────────────────────────
   dayList:  { gap: 8 },
   dayCard:  { borderRadius: 14, borderWidth: 1, borderColor: GLASS_BORDER, backgroundColor: "#070707", padding: 12, flexDirection: "row", alignItems: "center", gap: 12 },
-  dayCardCurrentGreen: { borderColor: "rgba(57,255,20,0.60)", backgroundColor: "rgba(57,255,20,0.06)", shadowColor: PRIMARY, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.15, shadowRadius: 14 },
-  dayCardCurrentAmber: { borderColor: "rgba(245,180,60,0.60)", backgroundColor: "rgba(245,180,60,0.06)", shadowColor: AMBER, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.15, shadowRadius: 14 },
+  dayCardCurrentGreen: { borderColor: "rgba(57,255,20,0.60)", backgroundColor: "rgba(57,255,20,0.06)", shadowColor: PRIMARY, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.15, shadowRadius: 24 },
+  dayCardCurrentAmber: { borderColor: "rgba(245,180,60,0.60)", backgroundColor: "rgba(245,180,60,0.06)", shadowColor: AMBER, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.15, shadowRadius: 24 },
   dayCardDoneGreen:    { borderColor: "rgba(57,255,20,0.25)", backgroundColor: "rgba(57,255,20,0.03)" },
   dayCardDoneAmber:    { borderColor: "rgba(245,180,60,0.30)", backgroundColor: "rgba(245,180,60,0.04)" },
   dayCardLocked:       { borderColor: "rgba(255,255,255,0.05)", backgroundColor: "#0a0a0a", opacity: 0.60 },
@@ -1298,7 +1298,7 @@ const styles = StyleSheet.create({
 
   // Day number box
   dayNumBox:     { width: 58, height: 58, borderRadius: 10, borderWidth: 1, borderColor: "#262626", justifyContent: "center", alignItems: "center", backgroundColor: "#0d0d0d", flexShrink: 0 },
-  milestoneBadge:{ position: "absolute", top: -8, right: -8, backgroundColor: "#050505", borderRadius: 10, padding: 1 },
+  milestoneBadge:{ position: "absolute", top: -8, right: -8, backgroundColor: "#050505", borderRadius: 10, padding: 1, shadowColor: AMBER, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.60, shadowRadius: 4 },
   dayLabel:      { color: "#8a8a8a", fontFamily: MONO.regular, fontSize: 9, letterSpacing: 2, marginBottom: 2 },
   dayNum:        { color: "#fff", fontFamily: MONO.bold, fontSize: 20, lineHeight: 24 },
 

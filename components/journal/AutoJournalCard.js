@@ -19,6 +19,7 @@ import { journalApi } from "../../src/api/journal";
 import ChartReviewModal from "./ChartReviewModal";
 import { useAlert } from "../../src/context/AlertContext";
 import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
+import AmbientGlow from "../common/AmbientGlow";
 
 const PRIMARY = "#39FF14";
 const AMBER = "#FBBF24";
@@ -456,8 +457,7 @@ export default function AutoJournalCard({ onImported, onNavigateToNew }) {
     <>
       {/* ── Hero upload card ───────────────────────────────────── */}
       <View style={ac.card}>
-        {/* Decorative glow orb */}
-        <View style={ac.glowOrb} pointerEvents="none" />
+        <AmbientGlow position="topRight" size={180} opacity={0.10} color={PRIMARY} />
 
         <View style={ac.inner}>
           {/* Left: text content */}
@@ -602,15 +602,6 @@ const ac = StyleSheet.create({
     shadowRadius: 30,
     elevation: 6,
   },
-  glowOrb: {
-    position: "absolute",
-    top: -80,
-    right: -48,
-    width: 288,
-    height: 288,
-    borderRadius: 144,
-    backgroundColor: PRIMARY + "1A",
-  },
   inner: { position: "relative", gap: 16 },
 
   // Text side
@@ -646,7 +637,7 @@ const ac = StyleSheet.create({
   uploadBtn: {
     backgroundColor: PRIMARY,
     borderRadius: 8,
-    paddingVertical: 13,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
@@ -654,7 +645,7 @@ const ac = StyleSheet.create({
     shadowColor: PRIMARY,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
-    shadowRadius: 18,
+    shadowRadius: 30,
     elevation: 6,
   },
   uploadBtnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 14 },

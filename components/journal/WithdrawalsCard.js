@@ -37,6 +37,8 @@ import { tokenService } from "../../src/services/tokenService";
 import { formatDate, formatMoney } from "../../src/utils/format";
 import { useAlert } from "../../src/context/AlertContext";
 import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
+import AmbientGlow from "../common/AmbientGlow";
+import { LinearGradient } from "expo-linear-gradient";
 
 const PRIMARY = "#39FF14";
 const SHEET_H = Math.min(Dimensions.get("window").height * 0.88, 640);
@@ -719,8 +721,7 @@ export default function WithdrawalsCard({ onNavigate }) {
   return (
     <>
       <View style={wc.card}>
-        {/* Decorative glow orb */}
-        <View style={wc.glowOrb} pointerEvents="none" />
+        <AmbientGlow position="bottomLeft" size={200} opacity={0.10} color={PRIMARY} />
 
         <View style={wc.inner}>
           {/* ── Total section ── */}
@@ -765,7 +766,10 @@ export default function WithdrawalsCard({ onNavigate }) {
                 <Text style={wc.progressPct}>{progress_to_next || 0}%</Text>
               </View>
               <View style={wc.progressTrack}>
-                <View
+                <LinearGradient
+                  colors={["#127a0a", PRIMARY]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
                   style={[
                     wc.progressFill,
                     { width: `${Math.min(progress_to_next || 0, 100)}%` },
@@ -902,15 +906,6 @@ const wc = StyleSheet.create({
     shadowRadius: 30,
     elevation: 6,
   },
-  glowOrb: {
-    position: "absolute",
-    bottom: -96,
-    left: -40,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: PRIMARY + "1A",
-  },
   inner: { position: "relative" },
 
   // Chip
@@ -980,7 +975,7 @@ const wc = StyleSheet.create({
     shadowColor: PRIMARY,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
-    shadowRadius: 14,
+    shadowRadius: 22,
     elevation: 4,
   },
   addBtnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 13 },
@@ -1025,7 +1020,6 @@ const wc = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: 6,
-    backgroundColor: PRIMARY,
   },
   progressMeta: {
     color: "rgba(255,255,255,0.60)",
