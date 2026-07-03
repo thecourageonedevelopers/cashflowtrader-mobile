@@ -4,6 +4,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PRIMARY } from "../auth/AuthStyles";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import { formsApi } from "../../src/api/forms";
 import { useAlert } from "../../src/context/AlertContext";
 
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
   },
   beforeCopy: {
     color: "#39FF14",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
 
   formDesc: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 20,
     marginBottom: 16,
@@ -284,14 +285,14 @@ const styles = StyleSheet.create({
   // Question
   questionLabel: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 20,
     lineHeight: 27,
     marginBottom: 4,
   },
   questionSub: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     marginBottom: 16,
   },
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     minHeight: 80,
     textAlignVertical: "top",
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
   radioInner: { width: 9, height: 9, borderRadius: 5, backgroundColor: "#39FF14" },
   radioLabel: {
     color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
     flex: 1,
   },
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
   },
   skipText: {
     color: "rgba(255,255,255,0.40)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
   },
   nextBtn: {
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   },
   nextBtnText: {
     color: "#000",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 14,
   },
 });

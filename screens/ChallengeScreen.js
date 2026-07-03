@@ -18,6 +18,7 @@ import {
 
 import ScreenLayout from "../components/common/ScreenLayout";
 import { PRIMARY } from "../components/auth/AuthStyles";
+import { DISPLAY, MONO, BODY } from "../src/theme/typography";
 import { useAuth } from "../src/hooks/useAuth";
 import { challengeApi } from "../src/api/challenge";
 import { uploadApi } from "../src/api/upload";
@@ -1082,7 +1083,7 @@ function MilestoneItem({ day, item, progress, onChanged }) {
         </View>
       ) : status === "pending" ? (
         <View style={{ gap: 4, marginTop: 4 }}>
-          <Text style={{ color: AMBER, fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1 }}>
+          <Text style={{ color: AMBER, fontFamily: MONO.regular, fontSize: 11, letterSpacing: 1 }}>
             ⏳ Proof under review
           </Text>
           <Text style={styles.pendingText}>
@@ -1199,20 +1200,20 @@ const styles = StyleSheet.create({
   scroll:      { flex: 1, backgroundColor: "#050505" },
   content:     { padding: 18, paddingBottom: 48, gap: 16 },
   loadingBox:  { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { color: "rgba(255,255,255,0.60)", fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 3 },
+  loadingText: { color: "rgba(255,255,255,0.60)", fontFamily: MONO.regular, fontSize: 11, letterSpacing: 3 },
 
   row:         { flexDirection: "row", alignItems: "center", gap: 6 },
   rowBetween:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
 
   // ── Hero left ─────────────────────────────────────────────────────────────
   heroLeft:      { gap: 14 },
-  heroStake:     { color: "rgba(57,255,20,0.85)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 2, lineHeight: 18, flex: 1 },
-  heroH1:        { fontFamily: "Inter_900Black", fontSize: 34, lineHeight: 40, letterSpacing: -0.5 },
+  heroStake:     { color: "rgba(57,255,20,0.85)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2, lineHeight: 18, flex: 1 },
+  heroH1:        { fontFamily: DISPLAY.extraBold, fontSize: 34, lineHeight: 40, letterSpacing: -0.5 },
   heroH1Green:   { color: PRIMARY, textShadowColor: "rgba(57,255,20,0.45)", textShadowRadius: 11 },
   heroH1White:   { color: "#fff", textShadowColor: "rgba(255,255,255,0.32)", textShadowRadius: 11 },
   momentumBadge: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderWidth: 1, borderColor: "rgba(57,255,20,0.30)", backgroundColor: "rgba(57,255,20,0.06)", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 },
-  momentumText:  { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 21, flex: 1 },
-  heroProof:     { color: "rgba(255,255,255,0.40)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 2 },
+  momentumText:  { color: "rgba(255,255,255,0.85)", fontFamily: BODY.regular, fontSize: 13, lineHeight: 21, flex: 1 },
+  heroProof:     { color: "rgba(255,255,255,0.40)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2 },
 
   // ── Today's move card ─────────────────────────────────────────────────────
   todayCard: {
@@ -1224,12 +1225,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   todayCardOrb:  { position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: 65, backgroundColor: PRIMARY, opacity: 0.06 },
-  todayChip:     { color: PRIMARY, fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 2 },
-  todayDayNum:   { color: PRIMARY, fontFamily: "Inter_900Black", fontSize: 58, lineHeight: 62, textShadowColor: "rgba(57,255,20,0.45)", textShadowRadius: 12 },
-  todayDayOf:    { color: "rgba(255,255,255,0.35)", fontFamily: "Inter_400Regular", fontSize: 16, marginBottom: 8 },
-  todayTitle:    { color: "#fff", fontFamily: "Inter_900Black", fontSize: 20, lineHeight: 26, marginTop: 6 },
-  todayCopy:     { color: "rgba(255,255,255,0.60)", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 21, marginTop: 6 },
-  nextLockText:  { color: "rgba(255,255,255,0.45)", fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 19, flex: 1 },
+  todayChip:     { color: PRIMARY, fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2 },
+  todayDayNum:   { color: PRIMARY, fontFamily: MONO.bold, fontSize: 58, lineHeight: 62, textShadowColor: "rgba(57,255,20,0.45)", textShadowRadius: 12 },
+  todayDayOf:    { color: "rgba(255,255,255,0.35)", fontFamily: DISPLAY.regular, fontSize: 16, marginBottom: 8 },
+  todayTitle:    { color: "#fff", fontFamily: DISPLAY.extraBold, fontSize: 20, lineHeight: 26, marginTop: 6 },
+  todayCopy:     { color: "rgba(255,255,255,0.60)", fontFamily: BODY.regular, fontSize: 13, lineHeight: 21, marginTop: 6 },
+  nextLockText:  { color: "rgba(255,255,255,0.45)", fontFamily: BODY.regular, fontSize: 12, lineHeight: 19, flex: 1 },
 
   // ── Glass card (all states that aren't today's move) ─────────────────────
   glassDark: {
@@ -1250,38 +1251,38 @@ const styles = StyleSheet.create({
   },
 
   // ── Purchase pitch extras ─────────────────────────────────────────────────
-  pitchCaption: { color: "rgba(255,255,255,0.35)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 2, textAlign: "center", marginTop: 8 },
+  pitchCaption: { color: "rgba(255,255,255,0.35)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2, textAlign: "center", marginTop: 8 },
 
   // ── Neon button (primary CTA) ─────────────────────────────────────────────
   neonBtn:     { backgroundColor: PRIMARY, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10, marginTop: 14 },
   neonBtnSm:   { paddingVertical: 10, paddingHorizontal: 14, marginTop: 0, borderRadius: 8, gap: 6 },
-  neonBtnText: { color: "#000", fontFamily: "Inter_700Bold", fontSize: 14, letterSpacing: 0.5 },
+  neonBtnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 14, letterSpacing: 0.5 },
 
   // ── Stats strip ───────────────────────────────────────────────────────────
   statsGrid:    { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   statCard:     { width: "47.5%", backgroundColor: GLASS_BG, borderWidth: 1, borderColor: GLASS_BORDER, borderTopColor: HIGHLIGHT, borderRadius: 16, padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  statValue:    { fontFamily: "Inter_900Black", fontSize: 36, lineHeight: 40, color: "#fff" },
-  statSuffix:   { color: "rgba(255,255,255,0.30)", fontFamily: "Inter_700Bold", fontSize: 16, marginLeft: 2, marginBottom: 4, alignSelf: "flex-end" },
-  statLabel:    { color: "rgba(255,255,255,0.55)", fontFamily: "Inter_700Bold", fontSize: 8, letterSpacing: 2, marginTop: 6, lineHeight: 13 },
-  statSub:      { color: "rgba(255,255,255,0.40)", fontFamily: "Inter_400Regular", fontSize: 9, lineHeight: 14, marginTop: 4 },
+  statValue:    { fontFamily: MONO.bold, fontSize: 36, lineHeight: 40, color: "#fff" },
+  statSuffix:   { color: "rgba(255,255,255,0.30)", fontFamily: MONO.bold, fontSize: 16, marginLeft: 2, marginBottom: 4, alignSelf: "flex-end" },
+  statLabel:    { color: "rgba(255,255,255,0.55)", fontFamily: MONO.regular, fontSize: 8, letterSpacing: 2, marginTop: 6, lineHeight: 13 },
+  statSub:      { color: "rgba(255,255,255,0.40)", fontFamily: BODY.regular, fontSize: 9, lineHeight: 14, marginTop: 4 },
   statIconWrap: { position: "relative", alignItems: "center", justifyContent: "center" },
   statIconGlow: { position: "absolute", width: 48, height: 48, borderRadius: 24, opacity: 0.20 },
 
   // ── Transformation bar ────────────────────────────────────────────────────
-  barLabel:     { color: "rgba(255,255,255,0.50)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 2 },
-  barPct:       { color: PRIMARY, fontFamily: "Inter_900Black", fontSize: 22 },
+  barLabel:     { color: "rgba(255,255,255,0.50)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2 },
+  barPct:       { color: PRIMARY, fontFamily: MONO.bold, fontSize: 22 },
   barTrack:     { height: 24, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", overflow: "visible", marginVertical: 10, position: "relative" },
   barFill:      { position: "absolute", top: 0, bottom: 0, left: 0, borderRadius: 12, background: "linear-gradient(90deg, #2bd40f, #39FF14)", backgroundColor: PRIMARY, shadowColor: PRIMARY, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 10 },
   milestoneMarker: { position: "absolute", top: "50%", marginTop: -12, marginLeft: -12, zIndex: 10 },
   milestoneCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#000", borderWidth: 2, borderColor: `${AMBER}aa`, justifyContent: "center", alignItems: "center", shadowColor: AMBER, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 6 },
   milestoneCircleReached: { backgroundColor: AMBER, borderColor: AMBER },
-  barStageCopy: { color: "rgba(255,255,255,0.55)", fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 20, marginTop: 4 },
-  barHint:      { color: "rgba(255,255,255,0.35)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1, marginLeft: 2 },
+  barStageCopy: { color: "rgba(255,255,255,0.55)", fontFamily: BODY.regular, fontSize: 12, lineHeight: 20, marginTop: 4 },
+  barHint:      { color: "rgba(255,255,255,0.35)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 1, marginLeft: 2 },
 
   // ── Certificate ───────────────────────────────────────────────────────────
-  certTitle:     { color: "#fff", fontFamily: "Inter_900Black", fontSize: 18, marginBottom: 4 },
-  certCopy:      { color: "rgba(255,255,255,0.60)", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 21 },
-  certPendingChip: { color: AMBER, fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 2, marginBottom: 6 },
+  certTitle:     { color: "#fff", fontFamily: DISPLAY.extraBold, fontSize: 18, marginBottom: 4 },
+  certCopy:      { color: "rgba(255,255,255,0.60)", fontFamily: BODY.regular, fontSize: 13, lineHeight: 21 },
+  certPendingChip: { color: AMBER, fontFamily: MONO.regular, fontSize: 9, letterSpacing: 2, marginBottom: 6 },
 
   // ── Day list ──────────────────────────────────────────────────────────────
   dayList:  { gap: 8 },
@@ -1298,83 +1299,83 @@ const styles = StyleSheet.create({
   // Day number box
   dayNumBox:     { width: 58, height: 58, borderRadius: 10, borderWidth: 1, borderColor: "#262626", justifyContent: "center", alignItems: "center", backgroundColor: "#0d0d0d", flexShrink: 0 },
   milestoneBadge:{ position: "absolute", top: -8, right: -8, backgroundColor: "#050505", borderRadius: 10, padding: 1 },
-  dayLabel:      { color: "#8a8a8a", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 2, marginBottom: 2 },
-  dayNum:        { color: "#fff", fontFamily: "Inter_900Black", fontSize: 20, lineHeight: 24 },
+  dayLabel:      { color: "#8a8a8a", fontFamily: MONO.regular, fontSize: 9, letterSpacing: 2, marginBottom: 2 },
+  dayNum:        { color: "#fff", fontFamily: MONO.bold, fontSize: 20, lineHeight: 24 },
 
   // Day center content
   dayCenter:     { flex: 1 },
   dayBadgeRow:   { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 5, marginBottom: 5 },
   badge:         { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: 1 },
-  badgeText:     { fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 1.5 },
-  itemCountText: { color: "rgba(255,255,255,0.70)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 2 },
+  badgeText:     { fontFamily: MONO.regular, fontSize: 9, letterSpacing: 1.5 },
+  itemCountText: { color: "rgba(255,255,255,0.70)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2 },
   skillChip:     { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", backgroundColor: "rgba(255,255,255,0.05)" },
-  skillChipText: { color: "rgba(255,255,255,0.70)", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 1.2 },
+  skillChipText: { color: "rgba(255,255,255,0.70)", fontFamily: MONO.regular, fontSize: 9, letterSpacing: 1.2 },
   lockedChip:    { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.20)", backgroundColor: "rgba(255,255,255,0.08)" },
-  lockedChipText:{ color: "rgba(255,255,255,0.70)", fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 1.5 },
-  dayTitle:      { color: "#fff", fontFamily: "Inter_900Black", fontSize: 15, lineHeight: 21, marginBottom: 3 },
-  lockedHook:    { color: "rgba(255,255,255,0.55)", fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 19 },
-  dayDesc:       { color: "rgba(255,255,255,0.70)", fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 19 },
+  lockedChipText:{ color: "rgba(255,255,255,0.70)", fontFamily: MONO.regular, fontSize: 9, letterSpacing: 1.5 },
+  dayTitle:      { color: "#fff", fontFamily: DISPLAY.extraBold, fontSize: 15, lineHeight: 21, marginBottom: 3 },
+  lockedHook:    { color: "rgba(255,255,255,0.55)", fontFamily: BODY.regular, fontSize: 12, lineHeight: 19 },
+  dayDesc:       { color: "rgba(255,255,255,0.70)", fontFamily: BODY.regular, fontSize: 12, lineHeight: 19 },
 
   // Day right indicator
   dayRight:      { flexShrink: 0, alignItems: "center", justifyContent: "center" },
-  dayRightText:  { fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1.5, color: "#fff" },
+  dayRightText:  { fontFamily: MONO.regular, fontSize: 11, letterSpacing: 1.5, color: "#fff" },
 
   // ── Day modal ─────────────────────────────────────────────────────────────
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.80)", justifyContent: "flex-end" },
   modalPanel:    { backgroundColor: "#0e0e0e", borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, borderColor: GLASS_BORDER, maxHeight: "92%", padding: 22 },
-  modalDayChip:  { color: PRIMARY, fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 2, marginBottom: 6 },
-  modalTitle:    { color: "#fff", fontFamily: "Inter_900Black", fontSize: 24, lineHeight: 30, marginBottom: 4 },
-  modalDesc:     { color: "rgba(255,255,255,0.65)", fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 22, marginTop: 4 },
+  modalDayChip:  { color: PRIMARY, fontFamily: MONO.regular, fontSize: 10, letterSpacing: 2, marginBottom: 6 },
+  modalTitle:    { color: "#fff", fontFamily: DISPLAY.extraBold, fontSize: 24, lineHeight: 30, marginBottom: 4 },
+  modalDesc:     { color: "rgba(255,255,255,0.65)", fontFamily: BODY.regular, fontSize: 14, lineHeight: 22, marginTop: 4 },
   modalClose:    { padding: 8 },
   modalCloseText:{ color: "rgba(255,255,255,0.50)", fontSize: 20 },
   modalCloseBtn: { marginTop: 16, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", alignSelf: "flex-end" },
-  modalCloseBtnText: { color: "rgba(255,255,255,0.70)", fontFamily: "Inter_700Bold", fontSize: 13 },
-  emptyText:     { color: "rgba(255,255,255,0.50)", fontFamily: "Inter_400Regular", fontSize: 13 },
+  modalCloseBtnText: { color: "rgba(255,255,255,0.70)", fontFamily: DISPLAY.bold, fontSize: 13 },
+  emptyText:     { color: "rgba(255,255,255,0.50)", fontFamily: BODY.regular, fontSize: 13 },
 
   // ── Item card ─────────────────────────────────────────────────────────────
   itemCard:      { borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.02)", padding: 14 },
   itemCardDone:  { borderColor: "rgba(57,255,20,0.25)", backgroundColor: "rgba(57,255,20,0.03)" },
-  itemTitle:     { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 14, flex: 1 },
-  reqMarker:     { color: "rgba(57,255,20,0.70)", fontFamily: "Inter_700Bold", fontSize: 10, marginLeft: 4 },
-  itemPoints:    { color: "rgba(255,255,255,0.40)", fontFamily: "Inter_700Bold", fontSize: 10, marginRight: 6 },
+  itemTitle:     { color: "#fff", fontFamily: DISPLAY.bold, fontSize: 14, flex: 1 },
+  reqMarker:     { color: "rgba(57,255,20,0.70)", fontFamily: MONO.regular, fontSize: 10, marginLeft: 4 },
+  itemPoints:    { color: "rgba(255,255,255,0.40)", fontFamily: MONO.regular, fontSize: 10, marginRight: 6 },
   itemBadge:     { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: 1 },
-  itemBadgeText: { fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 1.5 },
-  itemBodyText:  { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 22, marginBottom: 10 },
-  doneText:      { color: "rgba(57,255,20,0.70)", fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1.5 },
-  pendingText:   { color: "rgba(255,255,255,0.50)", fontFamily: "Inter_400Regular", fontSize: 13 },
-  neonLink:      { color: PRIMARY, fontFamily: "Inter_700Bold", fontSize: 12, letterSpacing: 1.5 },
+  itemBadgeText: { fontFamily: MONO.regular, fontSize: 9, letterSpacing: 1.5 },
+  itemBodyText:  { color: "rgba(255,255,255,0.85)", fontFamily: BODY.regular, fontSize: 13, lineHeight: 22, marginBottom: 10 },
+  doneText:      { color: "rgba(57,255,20,0.70)", fontFamily: MONO.regular, fontSize: 11, letterSpacing: 1.5 },
+  pendingText:   { color: "rgba(255,255,255,0.50)", fontFamily: BODY.regular, fontSize: 13 },
+  neonLink:      { color: PRIMARY, fontFamily: MONO.regular, fontSize: 12, letterSpacing: 1.5 },
 
   // ── Video ─────────────────────────────────────────────────────────────────
   videoPlaceholder: { height: 180, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "#0a0a0a", marginBottom: 10, justifyContent: "center", alignItems: "center" },
   playCircle:        { width: 60, height: 60, borderRadius: 30, backgroundColor: PRIMARY, justifyContent: "center", alignItems: "center" },
-  videoHint:         { color: "rgba(255,255,255,0.40)", fontFamily: "Inter_700Bold", fontSize: 10, letterSpacing: 1.5, marginTop: 10 },
+  videoHint:         { color: "rgba(255,255,255,0.40)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 1.5, marginTop: 10 },
 
   // ── Checklist ─────────────────────────────────────────────────────────────
   checkRow:    { paddingVertical: 6, gap: 10 },
   checkbox:    { width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: "#333", justifyContent: "center", alignItems: "center", flexShrink: 0 },
   checkboxChecked: { backgroundColor: PRIMARY, borderColor: PRIMARY },
-  checkText:   { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 },
+  checkText:   { color: "rgba(255,255,255,0.85)", fontFamily: BODY.regular, fontSize: 13, flex: 1 },
 
   // ── Quiz ──────────────────────────────────────────────────────────────────
-  quizQuestion:    { color: "rgba(255,255,255,0.90)", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 21 },
+  quizQuestion:    { color: "rgba(255,255,255,0.90)", fontFamily: BODY.regular, fontSize: 13, lineHeight: 21 },
   quizOption:      { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(0,0,0,0.30)" },
   quizOptionSelected: { borderColor: "rgba(57,255,20,0.50)", backgroundColor: "rgba(57,255,20,0.05)" },
   radioOuter:      { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: "#555", justifyContent: "center", alignItems: "center" },
   radioOuterSelected: { borderColor: PRIMARY },
   radioInner:      { width: 9, height: 9, borderRadius: 5, backgroundColor: PRIMARY },
-  quizOptionText:  { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_400Regular", fontSize: 13 },
+  quizOptionText:  { color: "rgba(255,255,255,0.85)", fontFamily: BODY.regular, fontSize: 13 },
 
   // ── Submission / text area ────────────────────────────────────────────────
-  textArea:    { backgroundColor: "rgba(0,0,0,0.40)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: "#fff", fontFamily: "Inter_400Regular", fontSize: 13, minHeight: 90, textAlignVertical: "top", marginBottom: 8 },
-  fileChip:    { color: "rgba(255,255,255,0.70)", fontFamily: "Inter_700Bold", fontSize: 10, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 4 },
+  textArea:    { backgroundColor: "rgba(0,0,0,0.40)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: "#fff", fontFamily: BODY.regular, fontSize: 13, minHeight: 90, textAlignVertical: "top", marginBottom: 8 },
+  fileChip:    { color: "rgba(255,255,255,0.70)", fontFamily: MONO.regular, fontSize: 10, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 4 },
   uploadBtn:   { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.20)", borderStyle: "dashed", alignSelf: "flex-start" },
-  uploadBtnText: { color: "#888", fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 1.5 },
+  uploadBtnText: { color: "#888", fontFamily: MONO.regular, fontSize: 11, letterSpacing: 1.5 },
 
   // ── Doubt box ─────────────────────────────────────────────────────────────
   doubtBox:          { marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.10)" },
-  doubtToggle:       { color: "rgba(255,255,255,0.70)", fontFamily: "Inter_700Bold", fontSize: 11, letterSpacing: 2, marginLeft: 6 },
+  doubtToggle:       { color: "rgba(255,255,255,0.70)", fontFamily: MONO.regular, fontSize: 11, letterSpacing: 2, marginLeft: 6 },
   doubtReply:        { borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.02)", padding: 12 },
   doubtReplyResolved:{ borderColor: "rgba(57,255,20,0.25)", backgroundColor: "rgba(57,255,20,0.04)" },
-  doubtReplyChip:    { color: PRIMARY, fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 2, marginBottom: 6 },
-  doubtReplyText:    { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 21 },
+  doubtReplyChip:    { color: PRIMARY, fontFamily: MONO.regular, fontSize: 9, letterSpacing: 2, marginBottom: 6 },
+  doubtReplyText:    { color: "rgba(255,255,255,0.85)", fontFamily: BODY.regular, fontSize: 13, lineHeight: 21 },
 });

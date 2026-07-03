@@ -16,6 +16,8 @@ import { journalApi } from "../src/api/journal";
 import { uploadApi } from "../src/api/upload";
 import { useAlert } from "../src/context/AlertContext";
 
+import { DISPLAY, MONO, BODY } from "../src/theme/typography";
+
 const PRIMARY = "#39FF14";
 const GLASS_BG = "rgba(255,255,255,0.03)";
 const GLASS_BORDER = "rgba(255,255,255,0.08)";
@@ -407,7 +409,7 @@ const s = StyleSheet.create({
   },
   backText: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
   },
 
@@ -424,21 +426,21 @@ const s = StyleSheet.create({
   },
   headerChipText: {
     color: "rgba(255,255,255,0.8)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
   h1: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 34,
     letterSpacing: -1,
     lineHeight: 40,
   },
   subtitle: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
     marginTop: 6,
     lineHeight: 20,
@@ -461,19 +463,19 @@ const s = StyleSheet.create({
   },
   sectionN: {
     color: "#39FF14",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   sectionTitle: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 19,
   },
   sectionSubtitle: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     marginTop: -10,
     marginBottom: 14,
@@ -484,7 +486,7 @@ const s = StyleSheet.create({
   fieldWrap: { gap: 6 },
   fieldLabel: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -497,7 +499,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
   },
 
@@ -505,7 +507,7 @@ const s = StyleSheet.create({
   toggleSection: { marginTop: 14, gap: 8 },
   toggleLabel: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -528,7 +530,7 @@ const s = StyleSheet.create({
   },
   toggleBtnText: {
     color: "rgba(255,255,255,0.7)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
   },
   toggleBtnTextActive: { color: PRIMARY },
@@ -548,7 +550,7 @@ const s = StyleSheet.create({
   shotFileName: {
     flex: 1,
     color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 12,
   },
   shotPicker: {
@@ -564,7 +566,7 @@ const s = StyleSheet.create({
   },
   shotPickerText: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -586,13 +588,13 @@ const s = StyleSheet.create({
   },
   tagChipText: {
     color: "rgba(255,255,255,0.75)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
   },
   tagChipTextActive: { color: PRIMARY },
   emptyTax: {
     color: "rgba(255,255,255,0.35)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     fontStyle: "italic",
   },
@@ -606,14 +608,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
     minHeight: 80,
     textAlignVertical: "top",
   },
   charCounter: {
     color: "rgba(255,255,255,0.4)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1.5,
     textAlign: "right",
@@ -638,7 +640,7 @@ const s = StyleSheet.create({
   },
   cancelBtnText: {
     color: "rgba(255,255,255,0.7)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
   },
   saveBtn: {
@@ -651,7 +653,7 @@ const s = StyleSheet.create({
   },
   saveBtnText: {
     color: "#000",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 14,
   },
 });

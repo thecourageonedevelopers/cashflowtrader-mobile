@@ -18,6 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import { journalApi } from "../../src/api/journal";
 import ChartReviewModal from "./ChartReviewModal";
 import { useAlert } from "../../src/context/AlertContext";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 
 const PRIMARY = "#39FF14";
 const AMBER = "#FBBF24";
@@ -74,7 +75,7 @@ function FieldLabel({ label, children }) {
 }
 const fl = StyleSheet.create({
   wrap: { flex: 1 },
-  label: { color: "rgba(255,255,255,0.4)", fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 4 },
+  label: { color: "rgba(255,255,255,0.4)", fontFamily: MONO.regular, fontSize: 9, letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 4 },
 });
 
 // ── InlinePicker — TouchableOpacity chip selector ─────────────────────────
@@ -108,7 +109,7 @@ const ip = StyleSheet.create({
     borderColor: PRIMARY,
     backgroundColor: PRIMARY + "20",
   },
-  chipText: { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_600SemiBold", fontSize: 11 },
+  chipText: { color: "rgba(255,255,255,0.6)", fontFamily: MONO.regular, fontSize: 11 },
   chipTextActive: { color: PRIMARY },
 });
 
@@ -276,7 +277,7 @@ const tr = StyleSheet.create({
     justifyContent: "center",
   },
   checkboxChecked: { backgroundColor: PRIMARY, borderColor: PRIMARY },
-  rowIndex: { color: "rgba(255,255,255,0.4)", fontFamily: "Inter_600SemiBold", fontSize: 10 },
+  rowIndex: { color: "rgba(255,255,255,0.4)", fontFamily: MONO.regular, fontSize: 10 },
   symbolInput: {
     backgroundColor: "rgba(0,0,0,0.4)",
     borderWidth: 1,
@@ -285,7 +286,7 @@ const tr = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: BODY.regular,
     fontSize: 13,
     width: 100,
   },
@@ -297,7 +298,7 @@ const tr = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
-  badgeText: { color: "rgba(255,255,255,0.7)", fontFamily: "Inter_600SemiBold", fontSize: 10, textTransform: "uppercase" },
+  badgeText: { color: "rgba(255,255,255,0.7)", fontFamily: MONO.regular, fontSize: 10, textTransform: "uppercase" },
   lossTag: {
     flexDirection: "row",
     alignItems: "center",
@@ -308,7 +309,7 @@ const tr = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
-  lossTagText: { color: "#fde68a", fontFamily: "Inter_600SemiBold", fontSize: 10, textTransform: "uppercase" },
+  lossTagText: { color: "#fde68a", fontFamily: MONO.regular, fontSize: 10, textTransform: "uppercase" },
 
   grid2: { flexDirection: "row", gap: 8 },
   grid3: { flexDirection: "row", gap: 6 },
@@ -321,18 +322,18 @@ const tr = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
   },
 
   slTpWrap: { flexDirection: "row", gap: 8, paddingVertical: 6 },
-  slTpText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  slTpText: { fontFamily: MONO.regular, fontSize: 12 },
 
   holdingWrap: { paddingVertical: 6 },
-  holdingText: { color: PRIMARY, fontFamily: "Inter_600SemiBold", fontSize: 13 },
+  holdingText: { color: PRIMARY, fontFamily: MONO.regular, fontSize: 13 },
 
   noteWrap: { flexDirection: "row", alignItems: "flex-start" },
-  noteText: { color: "#fde68a", fontFamily: "Inter_400Regular", fontSize: 12, flex: 1, lineHeight: 18 },
+  noteText: { color: "#fde68a", fontFamily: BODY.regular, fontSize: 12, flex: 1, lineHeight: 18 },
 
   reasonInput: {
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -342,7 +343,7 @@ const tr = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     textAlignVertical: "top",
   },
@@ -625,17 +626,17 @@ const ac = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  chipText: { color: PRIMARY, fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase" },
+  chipText: { color: PRIMARY, fontFamily: MONO.regular, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase" },
   headline: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 24,
     lineHeight: 30,
     letterSpacing: -0.5,
   },
   description: {
     color: "rgba(255,255,255,0.65)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -656,7 +657,7 @@ const ac = StyleSheet.create({
     shadowRadius: 18,
     elevation: 6,
   },
-  uploadBtnText: { color: "#000", fontFamily: "Inter_700Bold", fontSize: 14 },
+  uploadBtnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 14 },
   ghostBtn: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
@@ -666,7 +667,7 @@ const ac = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  ghostBtnText: { color: "rgba(255,255,255,0.8)", fontFamily: "Inter_700Bold", fontSize: 13 },
+  ghostBtnText: { color: "rgba(255,255,255,0.8)", fontFamily: DISPLAY.bold, fontSize: 13 },
   analyzeBtn: {
     borderWidth: 1,
     borderColor: PRIMARY + "66",
@@ -676,7 +677,7 @@ const ac = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  analyzeBtnText: { color: PRIMARY, fontFamily: "Inter_700Bold", fontSize: 13 },
+  analyzeBtnText: { color: PRIMARY, fontFamily: DISPLAY.bold, fontSize: 13 },
 });
 
 const cm = StyleSheet.create({
@@ -710,13 +711,13 @@ const cm = StyleSheet.create({
     paddingVertical: 3,
     marginBottom: 6,
   },
-  chipText: { color: PRIMARY, fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase" },
-  modalTitle: { color: "#fff", fontFamily: "Inter_900Black", fontSize: 18, lineHeight: 24 },
-  modalMeta: { color: "rgba(255,255,255,0.45)", fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 4 },
+  chipText: { color: PRIMARY, fontFamily: MONO.regular, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase" },
+  modalTitle: { color: "#fff", fontFamily: DISPLAY.extraBold, fontSize: 18, lineHeight: 24 },
+  modalMeta: { color: "rgba(255,255,255,0.45)", fontFamily: MONO.regular, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 4 },
 
   body: { padding: 16 },
   empty: { padding: 32, alignItems: "center" },
-  emptyText: { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 20, textAlign: "center" },
+  emptyText: { color: "rgba(255,255,255,0.6)", fontFamily: BODY.regular, fontSize: 13, lineHeight: 20, textAlign: "center" },
 
   footer: {
     flexDirection: "row",
@@ -727,7 +728,7 @@ const cm = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.08)",
     gap: 10,
   },
-  selectedCount: { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  selectedCount: { color: "rgba(255,255,255,0.5)", fontFamily: MONO.regular, fontSize: 12 },
   footerBtns: { flexDirection: "row", gap: 8, flexShrink: 1 },
   cancelBtn: {
     borderWidth: 1,
@@ -736,7 +737,7 @@ const cm = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  cancelBtnText: { color: "rgba(255,255,255,0.8)", fontFamily: "Inter_700Bold", fontSize: 13 },
+  cancelBtnText: { color: "rgba(255,255,255,0.8)", fontFamily: DISPLAY.bold, fontSize: 13 },
   importBtn: {
     backgroundColor: PRIMARY,
     borderRadius: 8,
@@ -745,5 +746,5 @@ const cm = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  importBtnText: { color: "#000", fontFamily: "Inter_700Bold", fontSize: 13 },
+  importBtnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 13 },
 });

@@ -36,6 +36,7 @@ import { withdrawalsApi } from "../../src/api/withdrawals";
 import { tokenService } from "../../src/services/tokenService";
 import { formatDate, formatMoney } from "../../src/utils/format";
 import { useAlert } from "../../src/context/AlertContext";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 
 const PRIMARY = "#39FF14";
 const SHEET_H = Math.min(Dimensions.get("window").height * 0.88, 640);
@@ -80,7 +81,7 @@ const sb = StyleSheet.create({
     paddingVertical: 2,
   },
   text: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 9,
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -187,28 +188,28 @@ const lc = StyleSheet.create({
   },
   levelLabel: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 9,
     letterSpacing: 2.5,
     textTransform: "uppercase",
   },
   inProgressText: {
     color: AMBER,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 9,
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
   target: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: MONO.bold,
     fontSize: 18,
     lineHeight: 22,
     marginTop: 2,
   },
   targetSub: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 9,
     letterSpacing: 0.5,
     marginTop: 2,
@@ -227,20 +228,20 @@ const lc = StyleSheet.create({
   },
   rewardLabel: {
     color: AMBER + "CC",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 9,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   rewardAmount: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.bold,
     fontSize: 13,
     marginTop: 2,
   },
   rewardDesc: {
     color: "rgba(255,255,255,0.65)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 10,
     lineHeight: 14,
   },
@@ -256,7 +257,7 @@ const lc = StyleSheet.create({
   },
   rewardCodeText: {
     color: PRIMARY,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
   },
   certBtn: {
@@ -271,7 +272,7 @@ const lc = StyleSheet.create({
   },
   certBtnText: {
     color: PRIMARY,
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 11,
   },
 });
@@ -345,10 +346,10 @@ const mm = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  title: { color: "#fff", fontFamily: "Inter_900Black", fontSize: 19, marginBottom: 8 },
+  title: { color: "#fff", fontFamily: DISPLAY.extraBold, fontSize: 19, marginBottom: 8 },
   body: {
     color: "rgba(255,255,255,0.7)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 21,
     marginBottom: 20,
@@ -361,7 +362,7 @@ const mm = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  btnText: { color: "#000", fontFamily: "Inter_700Bold", fontSize: 14 },
+  btnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 14 },
 });
 
 // ─── AddWithdrawalModal — updated to match web ────────────────────────────────
@@ -553,12 +554,12 @@ const am = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
   },
-  sheetTitle: { color: "#fff", fontFamily: "Inter_900Black", fontSize: 20 },
+  sheetTitle: { color: "#fff", fontFamily: DISPLAY.extraBold, fontSize: 20 },
   body: { padding: 20, gap: 14, paddingBottom: 40 },
   field: { gap: 6 },
   label: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -571,12 +572,12 @@ const am = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
   },
   inputHint: {
     color: "rgba(255,255,255,0.35)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1,
   },
@@ -608,10 +609,10 @@ const am = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
   },
-  proofLabel: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 14 },
+  proofLabel: { color: "#fff", fontFamily: DISPLAY.bold, fontSize: 14 },
   proofHint: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     marginTop: 3,
     lineHeight: 15,
@@ -625,7 +626,7 @@ const am = StyleSheet.create({
     justifyContent: "center",
     marginTop: 8,
   },
-  saveBtnText: { color: "#000", fontFamily: "Inter_700Bold", fontSize: 14 },
+  saveBtnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 14 },
 });
 
 // ─── WithdrawalsCard — main component ─────────────────────────────────────────
@@ -927,7 +928,7 @@ const wc = StyleSheet.create({
   },
   chipText: {
     color: PRIMARY,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -936,7 +937,7 @@ const wc = StyleSheet.create({
   // Total amount
   totalAmount: {
     color: PRIMARY,
-    fontFamily: "Inter_900Black",
+    fontFamily: MONO.bold,
     fontSize: 52,
     lineHeight: 56,
     textShadowColor: "rgba(57,255,20,0.5)",
@@ -953,12 +954,12 @@ const wc = StyleSheet.create({
   },
   totalMeta: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 12,
   },
   pendingMeta: {
     color: AMBER,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 12,
   },
 
@@ -982,7 +983,7 @@ const wc = StyleSheet.create({
     shadowRadius: 14,
     elevation: 4,
   },
-  addBtnText: { color: "#000", fontFamily: "Inter_700Bold", fontSize: 13 },
+  addBtnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 13 },
   viewBtn: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
@@ -992,7 +993,7 @@ const wc = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  viewBtnText: { color: "rgba(255,255,255,0.8)", fontFamily: "Inter_700Bold", fontSize: 13 },
+  viewBtnText: { color: "rgba(255,255,255,0.8)", fontFamily: DISPLAY.bold, fontSize: 13 },
 
   // Progress to current level
   progressSection: {
@@ -1006,12 +1007,12 @@ const wc = StyleSheet.create({
   },
   progressLabel: {
     color: "rgba(255,255,255,0.80)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 13,
   },
   progressPct: {
     color: PRIMARY,
-    fontFamily: "Inter_900Black",
+    fontFamily: MONO.bold,
     fontSize: 22,
     lineHeight: 26,
   },
@@ -1028,7 +1029,7 @@ const wc = StyleSheet.create({
   },
   progressMeta: {
     color: "rgba(255,255,255,0.60)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 12,
   },
 
@@ -1057,13 +1058,13 @@ const wc = StyleSheet.create({
   },
   mentorTitle: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 14,
     lineHeight: 18,
   },
   mentorHint: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: BODY.regular,
     fontSize: 10,
     lineHeight: 14,
     marginTop: 2,
@@ -1078,7 +1079,7 @@ const wc = StyleSheet.create({
   },
   mentorLearnText: {
     color: AMBER,
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 12,
   },
 
@@ -1099,7 +1100,7 @@ const wc = StyleSheet.create({
   },
   listEmpty: {
     color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
   },
   listRow: {
@@ -1131,7 +1132,7 @@ const wc = StyleSheet.create({
   },
   listAmount: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.bold,
     fontSize: 15,
   },
   listMeta: {
@@ -1141,13 +1142,13 @@ const wc = StyleSheet.create({
   },
   listMetaText: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     flex: 1,
   },
   reviewReason: {
     color: AMBER + "CC",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     marginTop: 2,
   },

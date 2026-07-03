@@ -16,6 +16,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 
 const TYPE_CONFIG = {
   success: {
@@ -179,7 +180,7 @@ const s = StyleSheet.create({
 
   title: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 20,
     lineHeight: 26,
     textAlign: "center",
@@ -188,7 +189,7 @@ const s = StyleSheet.create({
 
   message: {
     color: "rgba(255,255,255,0.68)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
     lineHeight: 22,
     textAlign: "center",
@@ -235,7 +236,7 @@ const s = StyleSheet.create({
   },
 
   // Button text
-  btnText: { fontFamily: "Inter_700Bold", fontSize: 14 },
+  btnText: { fontFamily: DISPLAY.bold, fontSize: 14 },
   btnTextPrimary: { color: "#000" },
   btnTextCancel: { color: "rgba(255,255,255,0.8)" },
   btnTextDestructive: { color: "#fff" },

@@ -18,7 +18,6 @@ export default function AppTabs() {
     <Tab.Navigator
       initialRouteName="OverviewScreen"
       backBehavior="none"
-      lazy={false}
       screenOptions={{
         headerShown: false,
         tabBarStyle: { display: "none" },

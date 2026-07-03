@@ -10,6 +10,7 @@ import React, { memo } from "react";
 import { Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 const NEON = "#39FF14";
 
 export default memo(function DrawerItem({ icon, label, isActive, onPress }) {
@@ -64,12 +65,12 @@ const styles = StyleSheet.create({
   label: {
     color: "rgba(255,255,255,0.70)",
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   // Active — web: text-neon
   activeLabel: {
     color: NEON,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: DISPLAY.bold,
   },
 });

@@ -23,6 +23,8 @@ import { formatDate, formatMoney, moneyColor } from "../src/utils/format";
 import WithdrawalsCard from "../components/journal/WithdrawalsCard";
 import AutoJournalCard from "../components/journal/AutoJournalCard";
 
+import { DISPLAY, MONO, BODY } from "../src/theme/typography";
+
 const PRIMARY = "#39FF14";
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const GLASS_BG = "rgba(255,255,255,0.03)";
@@ -354,9 +356,12 @@ export default function JournalScreen({ navigation }) {
       >
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <View style={s.header}>
-          <HeaderChip icon="scan-outline">Trading AI</HeaderChip>
+          <HeaderChip icon="notebook-outline">Auto Journal</HeaderChip>
           <Text style={s.h1}>
-            Your trading <Text style={{ color: PRIMARY }}>brain.</Text>
+            Log a day in <Text style={{ color: PRIMARY }}>seconds.</Text>
+          </Text>
+          <Text style={s.h1Desc}>
+            Drop a broker trade-history, a single trade, or even a chart. The AI detects each trade — review, filter, and report on every entry right here.
           </Text>
         </View>
 
@@ -763,17 +768,24 @@ const s = StyleSheet.create({
   },
   headerChipText: {
     color: PRIMARY,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
   h1: {
-    fontFamily: "Inter_900Black",
-    fontSize: 36,
+    fontFamily: DISPLAY.extraBold,
+    fontSize: 30,
     color: "#fff",
     letterSpacing: -1,
-    lineHeight: 42,
+    lineHeight: 36,
+  },
+  h1Desc: {
+    color: "rgba(255,255,255,0.55)",
+    fontFamily: BODY.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
   },
 
   // KPI grid: 2 cols, last item stretches full width if odd count
@@ -788,26 +800,26 @@ const s = StyleSheet.create({
     backgroundColor: GLASS_BG,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 14,
+    padding: 16,
   },
   kpiLabel: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   kpiValue: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
-    fontSize: 28,
+    fontFamily: MONO.bold,
+    fontSize: 30,
     marginTop: 6,
-    lineHeight: 32,
+    lineHeight: 34,
   },
   kpiSub: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -825,8 +837,8 @@ const s = StyleSheet.create({
     backgroundColor: GLASS_BG,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 14,
+    padding: 16,
   },
   microCardHeader: {
     flexDirection: "row",
@@ -841,13 +853,13 @@ const s = StyleSheet.create({
   },
   microLabel: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   microValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.bold,
     fontSize: 16,
   },
 
@@ -856,8 +868,8 @@ const s = StyleSheet.create({
     backgroundColor: GLASS_BG,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 14,
+    padding: 16,
     gap: 10,
     marginBottom: 10,
   },
@@ -874,7 +886,7 @@ const s = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
   },
   filterDatesRow: {
@@ -895,13 +907,13 @@ const s = StyleSheet.create({
   dateButtonText: {
     flex: 1,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
   },
   dateButtonPlaceholder: {
     flex: 1,
     color: "rgba(255,255,255,0.2)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
   },
   filterApplyBtn: {
@@ -934,7 +946,7 @@ const s = StyleSheet.create({
   },
   pickerDoneText: {
     color: "#000",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 14,
     letterSpacing: 1,
   },
@@ -944,8 +956,8 @@ const s = StyleSheet.create({
     backgroundColor: GLASS_BG,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 14,
+    padding: 16,
     gap: 12,
     marginBottom: 10,
   },
@@ -956,7 +968,7 @@ const s = StyleSheet.create({
   },
   quickFilterTitle: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 2.5,
     textTransform: "uppercase",
@@ -976,7 +988,7 @@ const s = StyleSheet.create({
   },
   reportBtnText: {
     color: "#000",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 11,
     letterSpacing: 0.5,
   },
@@ -996,7 +1008,7 @@ const s = StyleSheet.create({
   },
   reportMenuItemText: {
     color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
   },
   reportMenuFooter: {
@@ -1007,7 +1019,7 @@ const s = StyleSheet.create({
   },
   reportMenuFooterText: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 9,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -1015,7 +1027,7 @@ const s = StyleSheet.create({
   chipGroup: { gap: 8 },
   chipGroupLabel: {
     color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -1034,7 +1046,7 @@ const s = StyleSheet.create({
   },
   filterChipText: {
     color: "rgba(255,255,255,0.65)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -1046,14 +1058,14 @@ const s = StyleSheet.create({
   },
   filterCount: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1.8,
     textTransform: "uppercase",
   },
   clearBtn: {
     color: PRIMARY,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1.8,
     textTransform: "uppercase",
@@ -1062,7 +1074,7 @@ const s = StyleSheet.create({
   // Loading / empty
   loadingMono: {
     color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -1072,7 +1084,7 @@ const s = StyleSheet.create({
     backgroundColor: GLASS_STRONG_BG,
     borderWidth: 1,
     borderColor: GLASS_STRONG_BORDER,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 40,
     alignItems: "center",
     gap: 10,
@@ -1080,15 +1092,15 @@ const s = StyleSheet.create({
   },
   emptyTitle: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
-    fontSize: 26,
+    fontFamily: DISPLAY.extraBold,
+    fontSize: 30,
     letterSpacing: -0.5,
     textAlign: "center",
-    lineHeight: 32,
+    lineHeight: 36,
   },
   emptySubtitle: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
@@ -1098,7 +1110,7 @@ const s = StyleSheet.create({
     backgroundColor: GLASS_STRONG_BG,
     borderWidth: 1,
     borderColor: GLASS_STRONG_BORDER,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 40,
     alignItems: "center",
     gap: 12,
@@ -1106,7 +1118,7 @@ const s = StyleSheet.create({
   },
   noMatchTitle: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 22,
     letterSpacing: -0.5,
     textAlign: "center",
@@ -1117,8 +1129,8 @@ const s = StyleSheet.create({
     backgroundColor: GLASS_BG,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
-    borderRadius: 12,
-    padding: 18,
+    borderRadius: 14,
+    padding: 20,
   },
   deleteBtn: {
     position: "absolute",
@@ -1145,20 +1157,20 @@ const s = StyleSheet.create({
   },
   badgeText: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
   pnlHero: {
-    fontFamily: "Inter_900Black",
+    fontFamily: MONO.bold,
     fontSize: 30,
     marginTop: 10,
     lineHeight: 34,
   },
   tradeName: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 18,
     marginTop: 4,
     lineHeight: 24,
@@ -1170,7 +1182,7 @@ const s = StyleSheet.create({
   },
   dateText: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 12,
   },
   tagRow: {
@@ -1189,7 +1201,7 @@ const s = StyleSheet.create({
   },
   tagTextWhite: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1,
   },
@@ -1203,7 +1215,7 @@ const s = StyleSheet.create({
   },
   tagTextNeon: {
     color: PRIMARY,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1,
   },
@@ -1217,13 +1229,13 @@ const s = StyleSheet.create({
   },
   tagTextRed: {
     color: RED,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1,
   },
   reflection: {
     color: "rgba(255,255,255,0.8)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     fontStyle: "italic",
     lineHeight: 20,
@@ -1240,14 +1252,14 @@ const s = StyleSheet.create({
   },
   footerLeft: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   footerRight: {
     color: PRIMARY,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
   },
@@ -1264,7 +1276,7 @@ const s = StyleSheet.create({
   },
   neonBtnText: {
     color: "#000",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 13,
     letterSpacing: 1,
   },

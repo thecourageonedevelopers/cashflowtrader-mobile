@@ -29,6 +29,7 @@ import { profileApi } from "../../src/api/profile";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useAlert } from "../../src/context/AlertContext";
 import { extractApiError } from "../../src/utils/apiError";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 
 // ─── Design tokens (match web AvatarStudio) ───────────────────────────────────
 const NEON = "#39FF14";
@@ -299,7 +300,7 @@ const s = StyleSheet.create({
   headerTitle: {
     color: "#fff",
     fontSize: 17,
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     letterSpacing: -0.2,
   },
 
@@ -328,11 +329,11 @@ const s = StyleSheet.create({
   tabText: {
     color: "rgba(255,255,255,0.6)",
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
   },
   tabTextActive: {
     color: "#000",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
   },
 
   // Body
@@ -355,17 +356,17 @@ const s = StyleSheet.create({
   dropTitle: {
     color: "rgba(255,255,255,0.75)",
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: BODY.regular,
   },
   dropSub: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
   dropNote: {
     color: "rgba(57,255,20,0.5)",
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     marginTop: 2,
   },
 
@@ -389,14 +390,14 @@ const s = StyleSheet.create({
   neonBtnText: {
     color: "#000",
     fontSize: 14,
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
   },
 
   // Preset tab
   presetDesc: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     marginBottom: 14,
     lineHeight: 20,
   },

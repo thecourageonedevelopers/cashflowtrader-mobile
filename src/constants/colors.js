@@ -36,12 +36,16 @@ export const COLORS = {
   glassBorder: "rgba(255,255,255,0.06)",
 };
 
+// Semantic font tokens — import DISPLAY/MONO/BODY from src/theme/typography
+// for new code. This legacy map is kept for backward compat with older screens.
 export const FONTS = {
-  regular: "Inter_400Regular",
-  semiBold: "Inter_600SemiBold",
-  bold: "Inter_700Bold",
-  extraBold: "Inter_800ExtraBold",
-  black: "Inter_900Black",
+  // Body (Outfit)
+  regular:  "Outfit_400Regular",
+  semiBold: "Outfit_600SemiBold",
+  // Display headings (Cabinet Grotesk)
+  bold:      "CabinetGrotesk-Bold",
+  extraBold: "CabinetGrotesk-ExtraBold",
+  black:     "CabinetGrotesk-ExtraBold",
 };
 
 export const RADIUS = {

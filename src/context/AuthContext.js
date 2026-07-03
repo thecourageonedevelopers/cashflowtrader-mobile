@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -127,7 +128,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ── Derived flags ───────────────────────────────────────────────────────
-  const value = {
+  // useMemo ensures the context value object is only recreated when user or
+  // loading actually change. All action callbacks (login, logout, etc.) are
+  // useCallback-stable, so they do not contribute to spurious re-renders of
+  // every useAuth() consumer (AppDrawer, all screens) on unrelated re-renders
+  // of AuthProvider such as deep-link listener effects.
+  const value = useMemo(() => ({
     user,
     setUser,
     loading,
@@ -147,7 +153,7 @@ export function AuthProvider({ children }) {
     isOnboarded: user?.onboarded === true,
     hasChallengeAccess: user?.challenge_unlocked === true,
     hasCommunityAccess: user?.community_access === true,
-  };
+  }), [user, loading, login, register, logout, loginWithSession, checkAuth, setUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import ScreenLayout from "../components/common/ScreenLayout";
 import { PRIMARY } from "../components/auth/AuthStyles";
+import { DISPLAY, MONO, BODY } from "../src/theme/typography";
 import { useAuth } from "../src/hooks/useAuth";
 import { supportApi } from "../src/api/support";
 import { extractApiError } from "../src/utils/apiError";
@@ -450,7 +451,7 @@ const s = StyleSheet.create({
   chipText: {
     color: "rgba(57,255,20,0.80)",
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -458,8 +459,7 @@ const s = StyleSheet.create({
   heroTitle: {
     color: TEXT_COLOR,
     fontSize: 32,
-    fontFamily: "Inter_900Black",
-    fontWeight: "900",
+    fontFamily: DISPLAY.extraBold,
     letterSpacing: -0.8,
     lineHeight: 40,
   },
@@ -471,7 +471,7 @@ const s = StyleSheet.create({
   heroSub: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     lineHeight: 20,
   },
 
@@ -508,14 +508,13 @@ const s = StyleSheet.create({
   typeCardTitle: {
     color: TEXT_COLOR,
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: DISPLAY.bold,
   },
 
   typeCardDesc: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     lineHeight: 18,
   },
 
@@ -533,8 +532,7 @@ const s = StyleSheet.create({
   requestsHeading: {
     color: TEXT_COLOR,
     fontSize: 17,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: DISPLAY.bold,
   },
 
   emptyCard: {
@@ -549,7 +547,7 @@ const s = StyleSheet.create({
   emptyText: {
     color: "rgba(255,255,255,0.50)",
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     textAlign: "center",
   },
 
@@ -586,8 +584,7 @@ const s = StyleSheet.create({
   requestTypeLabel: {
     color: TEXT_COLOR,
     fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: DISPLAY.bold,
     flexShrink: 1,
   },
 
@@ -601,7 +598,7 @@ const s = StyleSheet.create({
 
   statusBadgeText: {
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
@@ -609,13 +606,13 @@ const s = StyleSheet.create({
   requestReason: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   requestMeta: {
     color: "rgba(255,255,255,0.30)",
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 0.5,
   },
 
@@ -658,7 +655,7 @@ const s = StyleSheet.create({
   bubbleAuthorUser: {
     color: "rgba(255,255,255,0.40)",
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 1,
     textTransform: "uppercase",
   },
@@ -666,7 +663,7 @@ const s = StyleSheet.create({
   bubbleAuthorStaff: {
     color: PRIMARY,
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 1,
     textTransform: "uppercase",
   },
@@ -674,7 +671,7 @@ const s = StyleSheet.create({
   bubbleText: {
     color: "rgba(255,255,255,0.80)",
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     lineHeight: 18,
   },
 
@@ -695,7 +692,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     color: TEXT_COLOR,
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     minHeight: 64,
   },
 
@@ -761,8 +758,7 @@ const s = StyleSheet.create({
   modalTitle: {
     color: TEXT_COLOR,
     fontSize: 22,
-    fontFamily: "Inter_900Black",
-    fontWeight: "900",
+    fontFamily: DISPLAY.extraBold,
     letterSpacing: -0.4,
   },
 
@@ -775,7 +771,7 @@ const s = StyleSheet.create({
   fieldLabel: {
     color: LABEL_COLOR,
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -789,7 +785,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     color: TEXT_COLOR,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   inputError: {
@@ -806,13 +802,13 @@ const s = StyleSheet.create({
     paddingTop: 12,
     color: TEXT_COLOR,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   fieldError: {
     color: "#f87171",
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   // ── Submit button ────────────────────────────────────────────────────────
@@ -837,7 +833,6 @@ const s = StyleSheet.create({
   submitBtnText: {
     color: "#000",
     fontSize: 15,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "800",
+    fontFamily: DISPLAY.bold,
   },
 });

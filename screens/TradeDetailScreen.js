@@ -17,6 +17,8 @@ import { tokenService } from "../src/services/tokenService";
 import { formatDate, formatMoney, moneyColor } from "../src/utils/format";
 import { useAlert } from "../src/context/AlertContext";
 
+import { DISPLAY, MONO, BODY } from "../src/theme/typography";
+
 const PRIMARY = "#39FF14";
 const GLASS_BG = "rgba(255,255,255,0.03)";
 const GLASS_BORDER = "rgba(255,255,255,0.08)";
@@ -560,14 +562,14 @@ const s = StyleSheet.create({
   },
   badgeText: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
   tradeName: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 24,
     letterSpacing: -0.5,
     lineHeight: 30,
@@ -579,7 +581,7 @@ const s = StyleSheet.create({
   },
   dateText: {
     color: "rgba(255,255,255,0.7)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 12,
   },
 
@@ -604,7 +606,7 @@ const s = StyleSheet.create({
   },
   detailStatLabel: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -612,7 +614,7 @@ const s = StyleSheet.create({
   },
   detailStatVal: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: MONO.bold,
     fontSize: 18,
     lineHeight: 22,
   },
@@ -621,7 +623,7 @@ const s = StyleSheet.create({
   section: { gap: 10 },
   sectionLabel: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 2.5,
     textTransform: "uppercase",
@@ -634,7 +636,7 @@ const s = StyleSheet.create({
   },
   chartSlot: { flex: 1, gap: 6 },
   chartSlotLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -651,7 +653,7 @@ const s = StyleSheet.create({
   },
   chartSlotEmptyText: {
     color: "rgba(255,255,255,0.35)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 12,
     textAlign: "center",
   },
@@ -665,7 +667,7 @@ const s = StyleSheet.create({
   },
   chartSlotFileName: {
     color: "rgba(255,255,255,0.7)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 12,
     paddingHorizontal: 8,
   },
@@ -689,7 +691,7 @@ const s = StyleSheet.create({
   },
   chartSlotBtnText: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 12,
   },
   analyzeBtn: {
@@ -702,12 +704,12 @@ const s = StyleSheet.create({
   },
   analyzeBtnText: {
     color: "#000",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 14,
   },
   analyzeHint: {
     color: "rgba(255,255,255,0.35)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1,
     textAlign: "center",
@@ -725,21 +727,21 @@ const s = StyleSheet.create({
   reviewVerdict: { gap: 4 },
   reviewVerdictLabel: {
     color: PRIMARY,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   reviewVerdictText: {
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
     lineHeight: 20,
   },
   reviewSection: { gap: 6 },
   reviewSectionLabel: {
     color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -758,7 +760,7 @@ const s = StyleSheet.create({
   reviewBulletText: {
     flex: 1,
     color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -773,7 +775,7 @@ const s = StyleSheet.create({
     width: 70,
     flexShrink: 0,
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1.8,
     textTransform: "uppercase",
@@ -792,7 +794,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   tagPillText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 11,
     letterSpacing: 1,
   },
@@ -825,14 +827,14 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   voiceLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   voiceText: {
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
     fontStyle: "italic",
     lineHeight: 20,
@@ -848,7 +850,7 @@ const s = StyleSheet.create({
   },
   reflectionText: {
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
     fontStyle: "italic",
     lineHeight: 22,
@@ -862,7 +864,7 @@ const s = StyleSheet.create({
   },
   chartSymbolText: {
     color: "rgba(255,255,255,0.7)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 12,
   },
 
@@ -877,7 +879,7 @@ const s = StyleSheet.create({
   },
   loggedText: {
     color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1.8,
     textTransform: "uppercase",
@@ -892,7 +894,7 @@ const s = StyleSheet.create({
   },
   pdfBtnText: {
     color: "#000",
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     fontSize: 13,
   },
 });

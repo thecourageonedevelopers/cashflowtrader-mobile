@@ -8,8 +8,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import AppHeader from "./AppHeader";
 import AppDrawer from "./AppDrawer";
+import { useNavLoading } from "../../src/context/NavLoadingContext";
 
 const DRAWER_WIDTH = 300;
 
@@ -28,14 +30,25 @@ export default function ScreenLayout({ children, screenName, navigation }) {
   // of device width so their behaviour is completely unchanged.
   const isDesktop = Platform.OS === "web" && width >= SIDEBAR_BREAKPOINT;
 
+  const { show, hide } = useNavLoading();
+
+  // Hide the navigation loading overlay whenever this screen gains focus.
+  // Fires on initial mount AND on every re-focus (e.g. navigating back).
+  useFocusEffect(useCallback(() => { hide(); }, [hide]));
+
   // All hooks declared unconditionally (React rules of hooks).
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // drawerTouchable is separate from drawerOpen so pointer events can be
+  // disabled the instant a navigation tap lands, without waiting for React
+  // to commit the setDrawerOpen(false) state update.
+  const [drawerTouchable, setDrawerTouchable] = useState(false);
   const drawerTranslateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const backdropOpacity  = useRef(new Animated.Value(0)).current;
   const isNavigating     = useRef(false);
 
   const openDrawer = useCallback(() => {
     setDrawerOpen(true);
+    setDrawerTouchable(true);
     Animated.parallel([
       Animated.spring(drawerTranslateX, {
         toValue: 0,
@@ -52,6 +65,8 @@ export default function ScreenLayout({ children, screenName, navigation }) {
   }, [drawerTranslateX, backdropOpacity]);
 
   const closeDrawer = useCallback((onDone) => {
+    // Disable taps immediately — before the animation runs.
+    setDrawerTouchable(false);
     Animated.parallel([
       Animated.spring(drawerTranslateX, {
         toValue: -DRAWER_WIDTH,
@@ -77,7 +92,7 @@ export default function ScreenLayout({ children, screenName, navigation }) {
       return;
     }
 
-    // Mobile / narrow-web: snap drawer shut, then navigate.
+    // Guard: ignore taps that arrive while a navigation is already in flight.
     if (isNavigating.current) return;
 
     if (routeName === screenName) {
@@ -86,19 +101,40 @@ export default function ScreenLayout({ children, screenName, navigation }) {
     }
 
     isNavigating.current = true;
+    // Show overlay immediately — gives instant feedback that the tap registered
+    // and blocks further interaction until the destination screen is ready.
+    show();
 
+    // Disable drawer taps immediately so the panel cannot receive further
+    // taps during the close animation.
+    setDrawerTouchable(false);
+
+    // Stop any in-progress spring that may be mid-travel.
     drawerTranslateX.stopAnimation();
     backdropOpacity.stopAnimation();
-    drawerTranslateX.setValue(-DRAWER_WIDTH);
-    backdropOpacity.setValue(0);
-    setDrawerOpen(false);
 
-    navigation.navigate(routeName);
-
-    setTimeout(() => {
+    // Animate the drawer closed with a predictable timing curve (no
+    // overshoot), then navigate only after the animation completes.
+    // This guarantees the drawer is visually gone before the screen
+    // switches and resets isNavigating inside the callback rather than
+    // on a fixed timeout, so the guard releases exactly when it is safe.
+    Animated.parallel([
+      Animated.timing(drawerTranslateX, {
+        toValue: -DRAWER_WIDTH,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setDrawerOpen(false);
+      navigation.navigate(routeName);
       isNavigating.current = false;
-    }, 300);
-  }, [isDesktop, navigation, screenName, drawerTranslateX, backdropOpacity, closeDrawer]);
+    });
+  }, [isDesktop, navigation, screenName, drawerTranslateX, backdropOpacity, closeDrawer, show]);
 
   // ─── DESKTOP WEB (≥ 768 px): permanent sidebar, no header ───────────────
   //
@@ -149,7 +185,7 @@ export default function ScreenLayout({ children, screenName, navigation }) {
           styles.drawerPanel,
           { transform: [{ translateX: drawerTranslateX }] },
         ]}
-        pointerEvents={drawerOpen ? "auto" : "none"}
+        pointerEvents={drawerTouchable ? "auto" : "none"}
       >
         <AppDrawer
           currentScreen={screenName}

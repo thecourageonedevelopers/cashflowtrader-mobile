@@ -27,7 +27,7 @@ export function formatMoney(amount = 0, currency = "INR", options = {}) {
   // en-IN gives Indian lakh/crore grouping for INR; falls back gracefully for others
   const formatted = abs.toLocaleString("en-IN", {
     maximumFractionDigits: 2,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
   });
   const sign = options.showSign
     ? amount >= 0 ? "+" : "-"
@@ -97,6 +97,17 @@ export function formatCountdown(targetDate) {
   if (totalMin >= 1) return `Starts in ${totalMin}m`;
   const sec = Math.floor(diff / 1000);
   return `Starts in ${sec}s`;
+}
+
+// Matches web's formatDate output: "Jul 2, 2026" (en-US locale, day: numeric).
+// Used by SessionsScreen. The existing formatDate("DD MMM YYYY") produces a
+// different format so this separate export avoids breaking other callers.
+export function formatSessionDate(iso) {
+  if (!iso) return "";
+  const s = String(iso).slice(0, 10);
+  const d = new Date(s + "T00:00:00");
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export function formatRelativeTime(date) {

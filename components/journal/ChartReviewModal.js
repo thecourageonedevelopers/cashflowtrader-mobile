@@ -25,6 +25,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { journalApi } from "../../src/api/journal";
 import { useAlert } from "../../src/context/AlertContext";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 
 const PRIMARY = "#39FF14";
 const RED = "#f87171";
@@ -78,7 +79,7 @@ export function ChartReviewResult({ review }) {
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={cr.matchText}>
-                    <Text style={{ fontFamily: "Inter_700Bold" }}>{r.side}:</Text>{" "}
+                    <Text style={{ fontFamily: MONO.regular }}>{r.side}:</Text>{" "}
                     {ok
                       ? "matches the recorded trade."
                       : unclear
@@ -169,7 +170,7 @@ const cr = StyleSheet.create({
 
   cardHeaderRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
   cardLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -179,20 +180,20 @@ const cr = StyleSheet.create({
   matchRow: { flexDirection: "row", alignItems: "flex-start" },
   matchText: {
     color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 20,
   },
   matchIssue: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 11,
     marginTop: 2,
     lineHeight: 16,
   },
   invalidHint: {
     color: "#fecaca",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 12,
     lineHeight: 18,
     marginTop: 4,
@@ -201,16 +202,16 @@ const cr = StyleSheet.create({
   bodyText: {
     flex: 1,
     color: "rgba(255,255,255,0.85)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 20,
   },
   twoCol: { flexDirection: "row", gap: 8 },
   listRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
-  bullet: { fontFamily: "Inter_700Bold", fontSize: 14, lineHeight: 20, flexShrink: 0 },
+  bullet: { fontFamily: MONO.regular, fontSize: 14, lineHeight: 20, flexShrink: 0 },
   emptyText: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -257,7 +258,7 @@ function ChartPicker({ label, accentColor, asset, onPick }) {
 
 const cp = StyleSheet.create({
   label: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -277,7 +278,7 @@ const cp = StyleSheet.create({
   },
   zoneText: {
     color: "rgba(255,255,255,0.7)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 11,
     textAlign: "center",
   },
@@ -475,15 +476,15 @@ const mo = StyleSheet.create({
   },
   chipText: {
     color: PRIMARY,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
-  title: { color: "#fff", fontFamily: "Inter_900Black", fontSize: 20, lineHeight: 26 },
+  title: { color: "#fff", fontFamily: DISPLAY.extraBold, fontSize: 20, lineHeight: 26 },
   subtitle: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1,
     marginTop: 4,
@@ -501,7 +502,7 @@ const mo = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 14,
   },
   analyzeBtn: {
@@ -517,5 +518,5 @@ const mo = StyleSheet.create({
     shadowRadius: 14,
     elevation: 4,
   },
-  analyzeBtnText: { color: "#000", fontFamily: "Inter_700Bold", fontSize: 14 },
+  analyzeBtnText: { color: "#000", fontFamily: DISPLAY.bold, fontSize: 14 },
 });

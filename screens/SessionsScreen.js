@@ -20,39 +20,37 @@ import { useQuery } from "@tanstack/react-query";
 
 import ScreenLayout from "../components/common/ScreenLayout";
 import { PRIMARY } from "../components/auth/AuthStyles";
+import { DISPLAY, MONO, BODY } from "../src/theme/typography";
+import { useAuth } from "../src/hooks/useAuth";
 import { sessionsApi } from "../src/api/sessions";
-import { formatCountdown, formatDate } from "../src/utils/format";
+import { formatCountdown, formatSessionDate } from "../src/utils/format";
+import { zonedSessionStart, tzOffsetLabel } from "../src/utils/tz";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const NEON                 = PRIMARY; // #39FF14
-const GLASS_BG             = "rgba(255,255,255,0.03)";
-const GLASS_BORDER         = "rgba(255,255,255,0.08)";
-const GLASS_STRONG_BG      = "rgba(10,10,10,0.8)";
-const GLASS_STRONG_BORDER  = "rgba(255,255,255,0.1)";
+const NEON             = PRIMARY; // #39FF14
+const GLASS_BG         = "rgba(255,255,255,0.03)";
+const GLASS_BORDER     = "rgba(255,255,255,0.08)";
+const GLASS_STRONG_BG  = "rgba(10,10,10,0.8)";
+const GLASS_STRONG_BDR = "rgba(255,255,255,0.1)";
 
 const IMPORTANCE_COLORS = {
-  MUST:        NEON,                      // text-[#39FF14]
-  RECOMMENDED: "rgba(255,255,255,0.8)",   // text-white/80
-  OPTIONAL:    "rgba(255,255,255,0.5)",   // text-white/50
+  MUST:        NEON,
+  RECOMMENDED: "rgba(255,255,255,0.8)",
+  OPTIONAL:    "rgba(255,255,255,0.5)",
 };
 
 // ─── Helpers (ported 1-to-1 from web LiveSessions.jsx) ───────────────────────
 
-function sessionStart(date, slot) {
-  if (!date || !slot) return null;
-  const m = slot.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
-  if (!m) return null;
-  let h = parseInt(m[1], 10);
-  const min = parseInt(m[2] || "0", 10);
-  const ap = (m[3] || "").toUpperCase();
-  if (ap === "PM" && h < 12) h += 12;
-  if (ap === "AM" && h === 12) h = 0;
-  const d = new Date(date + "T00:00:00");
-  d.setHours(h, min, 0, 0);
-  return d;
+// Deterministic pseudo-random attendee count — stable across renders
+function attendeeCountFor(id) {
+  if (!id) return 0;
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return 42 + (h % 180);
 }
 
+// 3-level importance based on title keywords
 function importanceFor(title = "") {
   const t = title.toLowerCase();
   if (
@@ -70,16 +68,23 @@ function importanceFor(title = "") {
   return { level: "OPTIONAL", label: "Optional", note: "Supporting session" };
 }
 
+// Hide rows that look like internal/test seeding
 function isTestSession(s) {
   const blob = `${s.title || ""} ${s.description || ""}`.toLowerCase();
   return /\b(test|qa|sample|dummy|debug|lorem)\b/.test(blob);
 }
 
-function attendeeCountFor(id) {
-  if (!id) return 0;
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return 42 + (h % 180);
+// The ONE shared meeting link set by Admin/Mentor. Never generate a new room.
+// Mirrors web's meetingUrlOf() exactly.
+function meetingUrlOf(s) {
+  const u = (s.meeting_url || s.join_url || "").trim();
+  if (!u) return "";
+  const base = u.split("?")[0].split("#")[0].replace(/\/+$/, "").toLowerCase();
+  if (
+    base === "https://meet.google.com/new" ||
+    base === "http://meet.google.com/new"
+  ) return "";
+  return u;
 }
 
 // Strips "Starts in " / "Starts " prefix — matches web's countdown.replace()
@@ -89,7 +94,7 @@ function inColumnText(countdown) {
   return countdown.replace(/^Starts (in )?/, "");
 }
 
-// ─── PulsingDot (mirrors web's animate-pulse on the LIVE badge dot) ───────────
+// ─── PulsingDot — mirrors web's animate-pulse on the LIVE badge dot ──────────
 
 function PulsingDot() {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -108,11 +113,16 @@ function PulsingDot() {
   return <Animated.View style={[styles.pulseDot, { opacity }]} />;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function SessionsScreen({ navigation }) {
+  const { user } = useAuth();
+  // Timezone from user profile — matches web's `const tz = user?.timezone || ""`
+  const tz    = user?.timezone || "";
+  const tzLbl = tz ? tzOffsetLabel(tz) : "";
+
   const [refreshing, setRefreshing] = useState(false);
-  // Reactive clock — re-evaluates countdowns every 30s (matches web setInterval 30_000)
+  // Reactive clock — re-evaluates countdowns every 30 s (matches web setInterval 30_000)
   const [now, setNow] = useState(new Date());
 
   const { data: rawSessions, isLoading, isError, refetch } = useQuery({
@@ -131,11 +141,19 @@ export default function SessionsScreen({ navigation }) {
     setRefreshing(false);
   }, [refetch]);
 
+  // Record attendance for mission credit — mirrors web's recordJoin()
+  const recordJoin = useCallback((id) => {
+    sessionsApi.join(id).catch(() => {});
+  }, []);
+
   const todayISO = now.toISOString().slice(0, 10);
 
-  // Filter test/seeded rows — matches web's isTestSession filter
+  // Filter test/seeded rows AND Cancelled — matches web's .filter() in useEffect
   const sessions = useMemo(
-    () => (rawSessions ?? []).filter((s) => !isTestSession(s)),
+    () =>
+      (rawSessions ?? []).filter(
+        (s) => !isTestSession(s) && s.status !== "Cancelled"
+      ),
     [rawSessions]
   );
 
@@ -147,20 +165,17 @@ export default function SessionsScreen({ navigation }) {
   }, [sessions]);
   const dates = useMemo(() => Object.keys(groupedByDate).sort(), [groupedByDate]);
 
-  // Earliest future session — matches web's nextSession useMemo
+  // Earliest future session globally — matches web's nextSession useMemo
   const nextSession = useMemo(() => {
     return sessions
-      .map((s) => ({ ...s, _start: sessionStart(s.date, s.time_slot) }))
+      .map((s) => ({ ...s, _start: zonedSessionStart(s.date, s.time_slot, tz) }))
       .filter((s) => s._start && s._start.getTime() > now.getTime())
       .sort((a, b) => a._start - b._start)[0] || null;
-  }, [sessions, now]);
+  }, [sessions, now, tz]);
 
-  const nextCountdown   = nextSession ? formatCountdown(nextSession._start) : null;
-  const nextAttendees   = nextSession ? attendeeCountFor(nextSession.session_id) : 0;
-
-  const handleJoin = useCallback((url) => {
-    Linking.openURL(url || "https://meet.google.com/new").catch(() => {});
-  }, []);
+  const nextCountdown = nextSession ? formatCountdown(nextSession._start) : null;
+  const nextAttendees = nextSession ? attendeeCountFor(nextSession.session_id) : 0;
+  const nextUrl       = nextSession ? meetingUrlOf(nextSession) : null;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -180,15 +195,18 @@ export default function SessionsScreen({ navigation }) {
         }
       >
 
-        {/* ── HEADER ─────────────────────────────────────────────────────── */}
+        {/* ── HEADER ────────────────────────────────────────────────────────
+            Matches web:
+              <div className="chip"><Radio /> Live Sessions</div>
+              <h1>Never trade <span className="neon-text">alone again.</span></h1>
+              <p className="text-white/60">Live market analysis…</p>
+        ──────────────────────────────────────────────────────────────────── */}
         <View style={styles.section}>
-          {/* Chip: Radio + "Live Sessions" */}
           <View style={styles.chip}>
             <Ionicons name="radio-outline" size={10} color={NEON} />
             <Text style={styles.chipText}>Live Sessions</Text>
           </View>
 
-          {/* H1 — matches: "Never trade <neon>alone again.</neon>" */}
           <Text style={styles.heroTitle}>
             {"Never trade "}
             <Text style={styles.neonText}>{"alone again."}</Text>
@@ -200,10 +218,14 @@ export default function SessionsScreen({ navigation }) {
           </Text>
         </View>
 
-        {/* ── NEXT SESSION HIGHLIGHT (glass-strong) ───────────────────────── */}
+        {/* ── NEXT SESSION HIGHLIGHT ────────────────────────────────────────
+            Matches web's glass-strong card with decorative orb, chip, title,
+            meta row (Date · Time(tz) · mentor · attendees), and join button
+            or "Link Coming Soon" disabled span.
+        ──────────────────────────────────────────────────────────────────── */}
         {nextSession && (
           <View style={[styles.section, styles.nextCard]}>
-            {/* Decorative orb — matches web's absolute blur-3xl bg-[#39FF14]/[0.08] */}
+            {/* Decorative orb — mirrors web's absolute blur-3xl bg-[#39FF14]/[0.08] */}
             <View style={styles.decorOrb} pointerEvents="none" />
 
             {/* Chip: Zap + "Next Live · countdown" */}
@@ -214,16 +236,28 @@ export default function SessionsScreen({ navigation }) {
               </Text>
             </View>
 
-            {/* Title */}
+            {/* Title — font-display font-black text-2xl sm:text-3xl */}
             <Text style={styles.nextCardTitle}>{nextSession.title}</Text>
 
-            {/* Meta row: Date · Time · Users attendees */}
+            {/* Meta row: Date · Time(tz) · with mentor · attendees */}
             <View style={styles.nextMetaRow}>
               <Text style={styles.metaText}>
-                {nextSession.date === todayISO ? "Today" : formatDate(nextSession.date)}
+                {nextSession.date === todayISO
+                  ? "Today"
+                  : formatSessionDate(nextSession.date)}
               </Text>
               <Text style={styles.metaSep}>{" · "}</Text>
-              <Text style={styles.metaText}>{nextSession.time_slot}</Text>
+              <Text style={styles.metaText}>
+                {tzLbl
+                  ? `${nextSession.time_slot} (${tzLbl})`
+                  : nextSession.time_slot}
+              </Text>
+              {nextSession.mentor_name ? (
+                <>
+                  <Text style={styles.metaSep}>{" · "}</Text>
+                  <Text style={styles.metaText}>{"with "}{nextSession.mentor_name}</Text>
+                </>
+              ) : null}
               <Text style={styles.metaSep}>{" · "}</Text>
               <View style={styles.metaAttendees}>
                 <Ionicons name="people-outline" size={11} color="rgba(255,255,255,0.6)" />
@@ -231,24 +265,33 @@ export default function SessionsScreen({ navigation }) {
               </View>
             </View>
 
-            {/* "Join Live" neon button — full-width on mobile (web: w-full sm:w-auto) */}
-            <TouchableOpacity
-              style={styles.neonBtn}
-              activeOpacity={0.85}
-              onPress={() => handleJoin(nextSession.join_url)}
-            >
-              <Text style={styles.neonBtnText}>Join Live</Text>
-              <Ionicons name="open-outline" size={16} color="#000" />
-            </TouchableOpacity>
+            {/* Join button OR "Link Coming Soon" disabled — matches web exactly */}
+            {nextUrl ? (
+              <TouchableOpacity
+                style={styles.neonBtn}
+                activeOpacity={0.85}
+                onPress={() => {
+                  Linking.openURL(nextUrl).catch(() => {});
+                  recordJoin(nextSession.session_id);
+                }}
+              >
+                <Text style={styles.neonBtnText}>Join Live</Text>
+                <Ionicons name="open-outline" size={16} color="#000" />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.disabledBtn}>
+                <Text style={styles.disabledBtnText}>Link Coming Soon</Text>
+              </View>
+            )}
           </View>
         )}
 
-        {/* ── LOADING — matches web's "Loading..." mono text ────────────── */}
+        {/* ── LOADING — matches web: mono uppercase "Loading..." ─────────── */}
         {isLoading && !rawSessions && (
           <Text style={styles.loadingText}>Loading...</Text>
         )}
 
-        {/* ── ERROR (extra beyond web — kept for native UX) ───────────────── */}
+        {/* ── ERROR — tap to retry (native-only UX) ─────────────────────── */}
         {isError && !rawSessions && !isLoading && (
           <View style={[styles.section, styles.emptyCard]}>
             <Text style={styles.emptyTitle}>Couldn't load sessions.</Text>
@@ -259,7 +302,7 @@ export default function SessionsScreen({ navigation }) {
         )}
 
         {/* ── EMPTY STATE — matches web copy exactly ──────────────────────── */}
-        {!isLoading && dates.length === 0 && (
+        {!isLoading && !isError && dates.length === 0 && (
           <View style={[styles.section, styles.emptyCard]}>
             <Text style={styles.emptyTitle}>No upcoming sessions yet.</Text>
             <Text style={styles.emptyBody}>
@@ -268,31 +311,57 @@ export default function SessionsScreen({ navigation }) {
           </View>
         )}
 
-        {/* ── SESSIONS LIST (grouped by date) ─────────────────────────────── */}
+        {/* ── SESSION LIST — grouped by date ────────────────────────────────
+            Matches web: dates.map → date header → grid of session cards
+        ──────────────────────────────────────────────────────────────────── */}
         {!isLoading && dates.map((date) => (
           <View key={date} style={styles.section}>
 
-            {/* Date header — matches web: "Today" or formatDate (DD MMM YYYY) */}
+            {/* Date header — matches web: font-mono 10px uppercase text-white/40 */}
             <Text style={styles.dateHeader}>
-              {date === todayISO ? "Today" : formatDate(date)}
+              {date === todayISO ? "Today" : formatSessionDate(date)}
             </Text>
 
-            {/* Session cards */}
             {groupedByDate[date].map((s) => {
               const imp       = importanceFor(s.title);
-              const start     = sessionStart(s.date, s.time_slot);
+              const status    = s.status || "Scheduled";
+              const isLive    = status === "Live";
+              const isEnded   = status === "Ended";
+              const start     = zonedSessionStart(s.date, s.time_slot, tz);
               const countdown = start ? formatCountdown(start) : null;
               const inText    = inColumnText(countdown);
               const attendees = attendeeCountFor(s.session_id);
+              const url       = meetingUrlOf(s);
+              const joinable  = !!url && !isEnded;
+
+              // "Starts" column value — includes tz label when user has timezone set
+              const startsValue = tzLbl
+                ? `${s.time_slot} (${tzLbl})`
+                : s.time_slot;
 
               return (
                 <View key={s.session_id} style={styles.sessionCard}>
 
-                  {/* Row 1: [LIVE chip w/ pulsing dot] + [importance label] */}
+                  {/* ── Row 1: Status chip + importance label ────────────────
+                      Web: <div className={`chip ${isLive ? "" : "opacity-80"}`}>
+                        {isLive ? <pulse-dot /> LIVE
+                         : status=Ended ? <span text-white/50>ENDED</span>
+                         : <span text-white/70>SCHEDULED</span>}
+                      </div>
+                      <span className={importanceClass[imp.level]}>{imp.label}</span>
+                  ──────────────────────────────────────────────────────────── */}
                   <View style={styles.cardRow1}>
-                    <View style={styles.chip}>
-                      <PulsingDot />
-                      <Text style={styles.chipText}>LIVE</Text>
+                    <View style={[styles.chip, !isLive && styles.chipDim]}>
+                      {isLive ? (
+                        <>
+                          <PulsingDot />
+                          <Text style={styles.chipText}>LIVE</Text>
+                        </>
+                      ) : isEnded ? (
+                        <Text style={[styles.chipText, styles.chipTextEnded]}>ENDED</Text>
+                      ) : (
+                        <Text style={[styles.chipText, styles.chipTextScheduled]}>SCHEDULED</Text>
+                      )}
                     </View>
                     <Text
                       style={[
@@ -304,22 +373,33 @@ export default function SessionsScreen({ navigation }) {
                     </Text>
                   </View>
 
-                  {/* Row 2: Title */}
+                  {/* ── Title — font-display font-bold text-xl ──────────── */}
                   <Text style={styles.cardTitle}>{s.title}</Text>
 
-                  {/* Row 3: Importance note */}
+                  {/* ── Mentor — "with {name}" font-mono text-white/45 ──── */}
+                  {s.mentor_name ? (
+                    <Text style={styles.mentorName}>{"with "}{s.mentor_name}</Text>
+                  ) : null}
+
+                  {/* ── Importance note ─────────────────────────────────── */}
                   <Text style={styles.cardNote}>{imp.note}</Text>
 
-                  {/* Row 4: Description (conditional) */}
+                  {/* ── Description (conditional) ────────────────────────── */}
                   {s.description ? (
                     <Text style={styles.cardDesc}>{s.description}</Text>
                   ) : null}
 
-                  {/* Row 5: 3-Column metadata grid — Starts / In / Attending */}
+                  {/* ── 3-Column metadata grid: Starts / In / Attending ───
+                      Matches web's grid-cols-3 gap-2.5 mt-5.
+                      "Starts" shows tz label when available.
+                      "In" is neon-colored.
+                  ──────────────────────────────────────────────────────────── */}
                   <View style={styles.metaGrid}>
                     <View style={styles.metaBox}>
                       <Text style={styles.metaBoxLabel}>Starts</Text>
-                      <Text style={styles.metaBoxValue}>{s.time_slot}</Text>
+                      <Text style={styles.metaBoxValue} numberOfLines={2}>
+                        {startsValue}
+                      </Text>
                     </View>
                     <View style={styles.metaBox}>
                       <Text style={styles.metaBoxLabel}>In</Text>
@@ -340,15 +420,32 @@ export default function SessionsScreen({ navigation }) {
                     </View>
                   </View>
 
-                  {/* Row 6: "Join Live Session" neon button */}
-                  <TouchableOpacity
-                    style={styles.neonBtn}
-                    activeOpacity={0.85}
-                    onPress={() => handleJoin(s.join_url)}
-                  >
-                    <Text style={styles.neonBtnText}>Join Live Session</Text>
-                    <Ionicons name="open-outline" size={16} color="#000" />
-                  </TouchableOpacity>
+                  {/* ── Join button OR disabled span ──────────────────────
+                      Web logic:
+                        joinable = url && status !== "Ended"
+                        joinable  → "Join Live Session" <ArrowUpRight>
+                        !joinable → "Session Ended" | "Link Coming Soon"
+                  ──────────────────────────────────────────────────────────── */}
+                  {joinable ? (
+                    <TouchableOpacity
+                      style={styles.neonBtn}
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        Linking.openURL(url).catch(() => {});
+                        recordJoin(s.session_id);
+                      }}
+                    >
+                      <Text style={styles.neonBtnText}>Join Live Session</Text>
+                      <Ionicons name="open-outline" size={16} color="#000" />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.disabledBtn}>
+                      <Text style={styles.disabledBtnText}>
+                        {isEnded ? "Session Ended" : "Link Coming Soon"}
+                      </Text>
+                    </View>
+                  )}
+
                 </View>
               );
             })}
@@ -369,18 +466,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
 
+  // padding: 20, gap: 24 between top-level sections — matches web's space-y-6 (24px)
   content: {
     padding: 20,
     paddingBottom: 48,
-    gap: 24, // space-y-6 = 24px between top-level sections
+    gap: 24,
   },
 
-  // Common section wrapper (matches web's space-y-6 children)
+  // Common section wrapper
   section: {
     gap: 12,
   },
 
-  // ── Chip (matches web's .chip class) ──────────────────────────────────────
+  // ── Chip — matches web's .chip class ──────────────────────────────────────
+  // border border-neon/25 bg-neon/5 px-2 py-0.5 rounded-full font-mono uppercase text-neon
   chip: {
     flexDirection: "row",
     alignItems: "center",
@@ -394,15 +493,30 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(57,255,20,0.05)",
   },
 
+  // Chip opacity-80 when session is not live — matches web's `isLive ? "" : "opacity-80"`
+  chipDim: {
+    opacity: 0.8,
+  },
+
   chipText: {
     color: NEON,
-    fontFamily: "Inter_800ExtraBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 1,
     textTransform: "uppercase",
   },
 
-  // Pulsing dot inside LIVE chip (6px = w-1.5 h-1.5 in Tailwind)
+  // ENDED override — text-white/50
+  chipTextEnded: {
+    color: "rgba(255,255,255,0.5)",
+  },
+
+  // SCHEDULED override — text-white/70
+  chipTextScheduled: {
+    color: "rgba(255,255,255,0.7)",
+  },
+
+  // Pulsing dot inside LIVE chip — w-1.5 h-1.5 rounded-full bg-neon
   pulseDot: {
     width: 6,
     height: 6,
@@ -413,7 +527,7 @@ const styles = StyleSheet.create({
   // ── Hero Header ───────────────────────────────────────────────────────────
   heroTitle: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 30,
     letterSpacing: -1,
     lineHeight: 38,
@@ -425,22 +539,22 @@ const styles = StyleSheet.create({
 
   heroSubtitle: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 20,
   },
 
-  // ── Next Session Card (glass-strong) ──────────────────────────────────────
+  // ── Next Session Card — glass-strong p-5 sm:p-7 relative overflow-hidden ──
   nextCard: {
     backgroundColor: GLASS_STRONG_BG,
     borderWidth: 1,
-    borderColor: GLASS_STRONG_BORDER,
+    borderColor: GLASS_STRONG_BDR,
     borderRadius: 16,
     padding: 20,
     overflow: "hidden",
   },
 
-  // Decorative orb: absolute top-right (mirrors web's blur-3xl div)
+  // Decorative orb — -right-20 -top-20 w-64 h-64 rounded-full bg-neon/8 blur-3xl
   decorOrb: {
     position: "absolute",
     right: -40,
@@ -451,14 +565,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(57,255,20,0.08)",
   },
 
+  // font-display font-black text-2xl sm:text-3xl tracking-tighter
   nextCardTitle: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 22,
     letterSpacing: -0.5,
     lineHeight: 30,
   },
 
+  // Meta row — flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-white/60
   nextMetaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -468,7 +584,7 @@ const styles = StyleSheet.create({
 
   metaText: {
     color: "rgba(255,255,255,0.6)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: MONO.regular,
     fontSize: 11,
   },
 
@@ -483,7 +599,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 
-  // ── Neon Button (matches web's .neon-btn — full-width on mobile) ──────────
+  // ── Neon Button — matches web's .neon-btn full-width on mobile ────────────
   neonBtn: {
     backgroundColor: NEON,
     paddingHorizontal: 20,
@@ -502,14 +618,35 @@ const styles = StyleSheet.create({
 
   neonBtnText: {
     color: "#000",
-    fontFamily: "Inter_800ExtraBold",
+    fontFamily: DISPLAY.bold,
     fontSize: 14,
   },
 
-  // ── Loading State (matches web: mono uppercase "Loading...") ──────────────
+  // ── Disabled Button — matches web's cursor-not-allowed span ───────────────
+  // border border-white/15 text-white/40 font-mono uppercase tracking-[0.12em]
+  disabledBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+  },
+
+  disabledBtnText: {
+    color: "rgba(255,255,255,0.4)",
+    fontFamily: MONO.regular,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+  },
+
+  // ── Loading — mono uppercase text-white/50 ────────────────────────────────
   loadingText: {
     color: "rgba(255,255,255,0.5)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 3,
     textTransform: "uppercase",
@@ -517,7 +654,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
 
-  // ── Empty State (matches web .glass p-10 text-center) ─────────────────────
+  // ── Empty State — glass p-10 text-center ──────────────────────────────────
   emptyCard: {
     backgroundColor: GLASS_BG,
     borderWidth: 1,
@@ -529,14 +666,14 @@ const styles = StyleSheet.create({
 
   emptyTitle: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 18,
     textAlign: "center",
   },
 
   emptyBody: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     textAlign: "center",
     lineHeight: 20,
@@ -554,30 +691,30 @@ const styles = StyleSheet.create({
 
   retryText: {
     color: NEON,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
   },
 
-  // ── Date Header (matches web: mono 10px uppercase text-white/40) ──────────
+  // ── Date Header — font-mono 10px tracking-[0.2em] uppercase text-white/40 ─
   dateHeader: {
     color: "rgba(255,255,255,0.4)",
-    fontFamily: "Inter_800ExtraBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 3,
     textTransform: "uppercase",
   },
 
-  // ── Session Card (matches web .glass p-5 flex flex-col) ───────────────────
+  // ── Session Card — glass p-5 flex flex-col h-full ─────────────────────────
   sessionCard: {
     backgroundColor: GLASS_BG,
     borderWidth: 1,
     borderColor: GLASS_BORDER,
     borderRadius: 16,
     padding: 20,
-    gap: 12,
+    gap: 10,
   },
 
-  // Row 1: LIVE badge + importance label
+  // Row 1: status chip + importance label
   cardRow1: {
     flexDirection: "row",
     alignItems: "center",
@@ -586,44 +723,53 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  // Importance label — text only, no border (matches web: className={importanceClass[imp.level]})
+  // Importance label — importanceClass[imp.level] in web, color injected inline
   importanceLabel: {
-    fontFamily: "Inter_800ExtraBold",
+    fontFamily: MONO.regular,
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
 
-  // Row 2: Title
+  // font-display font-bold text-xl mt-3 break-words
   cardTitle: {
     color: "#fff",
-    fontFamily: "Inter_900Black",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 18,
     letterSpacing: -0.3,
     lineHeight: 26,
   },
 
-  // Row 3: Importance note
+  // "with {mentor_name}" — font-mono text-[11px] text-white/45 mt-1
+  mentorName: {
+    color: "rgba(255,255,255,0.45)",
+    fontFamily: MONO.regular,
+    fontSize: 11,
+  },
+
+  // Importance note — font-body text-white/55 text-sm mt-1
   cardNote: {
     color: "rgba(255,255,255,0.55)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
   },
 
-  // Row 4: Description
+  // Description — text-white/65 font-body text-sm mt-3 break-words
   cardDesc: {
     color: "rgba(255,255,255,0.65)",
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 20,
   },
 
-  // Row 5: 3-Column Metadata Grid
+  // ── 3-Column Metadata Grid — grid-cols-3 gap-2.5 mt-5 ────────────────────
   metaGrid: {
     flexDirection: "row",
     gap: 8,
+    marginTop: 4,
   },
 
+  // Each cell — p-3 rounded-md border border-white/10 bg-white/[0.02] min-h-[68px]
   metaBox: {
     flex: 1,
     padding: 12,
@@ -631,29 +777,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(255,255,255,0.02)",
-    minHeight: 64,
+    minHeight: 68,
     justifyContent: "space-between",
   },
 
+  // Label — font-mono text-[9px] tracking-[0.2em] uppercase text-white/40
   metaBoxLabel: {
     color: "rgba(255,255,255,0.4)",
-    fontFamily: "Inter_800ExtraBold",
+    fontFamily: MONO.regular,
     fontSize: 9,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
 
+  // Value — font-mono text-sm text-white
   metaBoxValue: {
     color: "#fff",
-    fontFamily: "Inter_400Regular",
+    fontFamily: MONO.regular,
     fontSize: 13,
     marginTop: 4,
   },
 
+  // "In" value is neon — text-neon
   metaBoxNeon: {
     color: NEON,
   },
 
+  // Attending row (icon + number)
   metaBoxRow: {
     flexDirection: "row",
     alignItems: "center",

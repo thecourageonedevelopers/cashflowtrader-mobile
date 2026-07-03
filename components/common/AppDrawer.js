@@ -30,6 +30,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { PRIMARY, authBaseStyles } from "../auth/AuthStyles";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import DrawerItem from "./DrawerItem";
 import { useAuth } from "../../src/context/AuthContext";
 
@@ -225,14 +226,14 @@ const s = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2,
     textTransform: "uppercase",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
   },
 
   // Name — web: font-display font-bold text-base mt-1
   profileName: {
     color: "#fff",
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     marginTop: 4,
   },
 
@@ -240,7 +241,7 @@ const s = StyleSheet.create({
   profileEmail: {
     color: "rgba(255,255,255,0.50)",
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: MONO.regular,
   },
 
   // Challenge badge — web: mt-2 inline-flex items-center gap-1 text-[10px] tracking-[0.15em] uppercase text-neon
@@ -262,7 +263,7 @@ const s = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.5,
     textTransform: "uppercase",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
   },
 
   // Nav scroll area — web: px-4 mt-6 flex flex-col gap-1
@@ -292,7 +293,7 @@ const s = StyleSheet.create({
   adminLabel: {
     color: NEON,
     fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: DISPLAY.bold,
   },
 
   // Bottom section
@@ -323,6 +324,6 @@ const s = StyleSheet.create({
   signOutText: {
     color: "rgba(255,255,255,0.60)",
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 });

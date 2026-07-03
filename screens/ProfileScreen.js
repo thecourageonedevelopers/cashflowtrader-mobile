@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import ScreenLayout from "../components/common/ScreenLayout";
 import AvatarStudio from "../components/common/AvatarStudio";
 import { PRIMARY } from "../components/auth/AuthStyles";
+import { DISPLAY, MONO, BODY } from "../src/theme/typography";
 import { useAuth } from "../src/hooks/useAuth";
 import { useAvatarUrl } from "../src/lib/avatar";
 import { profileApi } from "../src/api/profile";
@@ -940,7 +941,7 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     color: "rgba(57,255,20,0.80)",
     fontSize: 11,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -989,8 +990,7 @@ const styles = StyleSheet.create({
   avatarInitial: {
     color: "#000",
     fontSize: 32,
-    fontFamily: "Inter_900Black",
-    fontWeight: "900",
+    fontFamily: DISPLAY.extraBold,
   },
 
   // Camera button — matches web absolute -bottom-1 -right-1 w-8 h-8
@@ -1016,8 +1016,7 @@ const styles = StyleSheet.create({
   heroHeading: {
     color: TEXT_COLOR,
     fontSize: 26,
-    fontFamily: "Inter_900Black",
-    fontWeight: "900",
+    fontFamily: DISPLAY.extraBold,
     letterSpacing: -0.5,
     lineHeight: 32,
   },
@@ -1029,7 +1028,7 @@ const styles = StyleSheet.create({
   identityHint: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     lineHeight: 18,
   },
 
@@ -1043,7 +1042,7 @@ const styles = StyleSheet.create({
   refreshLink: {
     color: PRIMARY,
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -1076,8 +1075,7 @@ const styles = StyleSheet.create({
   goalBarLabel: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: MONO.regular,
     letterSpacing: 0.8,
     textTransform: "uppercase",
     flex: 1,
@@ -1085,8 +1083,7 @@ const styles = StyleSheet.create({
 
   goalBarPct: {
     fontSize: 13,
-    fontFamily: "Inter_900Black",
-    fontWeight: "900",
+    fontFamily: MONO.bold,
   },
 
   goalBarTrack: {
@@ -1109,7 +1106,7 @@ const styles = StyleSheet.create({
   goalBarMeta: {
     color: "rgba(255,255,255,0.55)",
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   statCard: {
@@ -1124,8 +1121,7 @@ const styles = StyleSheet.create({
   statLabel: {
     color: "rgba(255,255,255,0.45)",
     fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: MONO.regular,
     letterSpacing: 0.8,
     textTransform: "uppercase",
     marginBottom: 4,
@@ -1134,14 +1130,13 @@ const styles = StyleSheet.create({
   statValue: {
     color: TEXT_COLOR,
     fontSize: 20,
-    fontFamily: "Inter_900Black",
-    fontWeight: "900",
+    fontFamily: MONO.bold,
   },
 
   statHint: {
     color: "rgba(255,255,255,0.35)",
     fontSize: 9,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     marginTop: 2,
   },
 
@@ -1153,8 +1148,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     color: LABEL_COLOR,
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: MONO.regular,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -1162,7 +1156,7 @@ const styles = StyleSheet.create({
   fieldHint: {
     color: "rgba(255,255,255,0.35)",
     fontSize: 10,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     lineHeight: 14,
   },
 
@@ -1175,7 +1169,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: TEXT_COLOR,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   inputMultiline: {
@@ -1207,7 +1201,7 @@ const styles = StyleSheet.create({
   protectedValue: {
     color: "rgba(255,255,255,0.75)",
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     flex: 1,
   },
 
@@ -1221,7 +1215,7 @@ const styles = StyleSheet.create({
   verifiedText: {
     color: PRIMARY,
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 1,
     textTransform: "uppercase",
   },
@@ -1238,7 +1232,7 @@ const styles = StyleSheet.create({
   changeBtnText: {
     color: "rgba(255,255,255,0.80)",
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
@@ -1258,7 +1252,7 @@ const styles = StyleSheet.create({
   pickerValue: {
     color: TEXT_COLOR,
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     flex: 1,
     marginRight: 8,
   },
@@ -1293,7 +1287,7 @@ const styles = StyleSheet.create({
   securityRowLabel: {
     color: "rgba(255,255,255,0.40)",
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     letterSpacing: 1.8,
     textTransform: "uppercase",
     marginBottom: 2,
@@ -1302,7 +1296,7 @@ const styles = StyleSheet.create({
   securityRowValue: {
     color: TEXT_COLOR,
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   securityPwRow: {
@@ -1347,7 +1341,7 @@ const styles = StyleSheet.create({
   neonSmallBtnText: {
     color: "#000",
     fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontFamily: DISPLAY.bold,
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
@@ -1359,13 +1353,13 @@ const styles = StyleSheet.create({
   forgotLink: {
     color: "rgba(57,255,20,0.80)",
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   securityMeta: {
     color: "rgba(255,255,255,0.40)",
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
     lineHeight: 16,
   },
 
@@ -1414,8 +1408,7 @@ const styles = StyleSheet.create({
   saveBtnText: {
     color: "#000",
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "800",
+    fontFamily: DISPLAY.bold,
   },
 
   // ── Password button ──────────────────────────────────────────────────────
@@ -1439,8 +1432,7 @@ const styles = StyleSheet.create({
   pwBtnText: {
     color: "rgba(255,255,255,0.85)",
     fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: DISPLAY.bold,
   },
 
   // ── Picker modal ─────────────────────────────────────────────────────────
@@ -1473,8 +1465,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     color: TEXT_COLOR,
     fontSize: 15,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: DISPLAY.bold,
   },
 
   modalOption: {
@@ -1494,12 +1485,11 @@ const styles = StyleSheet.create({
   modalOptionText: {
     color: "rgba(255,255,255,0.65)",
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
+    fontFamily: BODY.regular,
   },
 
   modalOptionTextActive: {
     color: TEXT_COLOR,
-    fontFamily: "Inter_700Bold",
-    fontWeight: "700",
+    fontFamily: DISPLAY.bold,
   },
 });

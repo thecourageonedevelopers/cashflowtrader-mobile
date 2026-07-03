@@ -5,6 +5,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 import { PRIMARY } from "../auth/AuthStyles";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useAlert } from "../../src/context/AlertContext";
 import { challengeApi } from "../../src/api/challenge";
@@ -117,11 +118,11 @@ export default function ChallengeLanding({ data, onPurchased }) {
         Build more confidence. Trade with more clarity. Create consistent monthly income.
       </Text>
 
-      {/* Benefits — 2×2 grid (web is grid-cols-4 gap-2, mobile maps to 2×2) */}
+      {/* Benefits — 4 columns in one row (matches web grid-cols-4 gap-2) */}
       <View style={styles.benefitsGrid}>
         {BENEFITS.map(({ icon, a, b }, i) => (
           <View key={i} style={styles.benefitCard}>
-            <Ionicons name={icon} size={28} color={PRIMARY} strokeWidth={1.75} />
+            <Ionicons name={icon} size={22} color={PRIMARY} />
             <Text style={styles.benefitText}>{a}{"\n"}{b}</Text>
           </View>
         ))}
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
   },
 
-  // Badge
+  // Badge — web: px-3.5 py-1.5, tracking-[0.16em]×9.5px=1.52, mt-4 below
   badgeWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -188,8 +189,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(57,255,20,0.08)",
     borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    marginBottom: 20,
+    paddingVertical: 6,
+    marginBottom: 16,
   },
   badgeDot: {
     width: 6,
@@ -199,70 +200,73 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#39FF14",
-    fontFamily: "Inter_700Bold",
+    fontFamily: MONO.regular,
     fontSize: 9.5,
-    letterSpacing: 2.4,
+    letterSpacing: 1.5,
     textTransform: "uppercase",
   },
 
-  // Hero
+  // Hero H1 — web: text-[6.4vw]=24px@375px, leading-[0.95]=22.8px, tracking-[-0.035em]
   heroH1: {
-    fontFamily: "Inter_900Black",
-    fontSize: 28,
-    lineHeight: 33,
-    letterSpacing: -0.5,
+    fontFamily: DISPLAY.extraBold,
+    fontSize: 22,
+    lineHeight: 26,
+    letterSpacing: -0.8,
     color: "#fff",
-    marginBottom: 6,
+    marginBottom: 4,
   },
+  // Hero P — web: text-[4vw]=15px@375px, leading-[0.98]=14.7px, tracking-[-0.025em]
   heroP: {
-    fontFamily: "Inter_900Black",
-    fontSize: 20,
-    lineHeight: 25,
-    letterSpacing: -0.3,
+    fontFamily: DISPLAY.extraBold,
+    fontSize: 15,
+    lineHeight: 18,
+    letterSpacing: -0.4,
     color: "#fff",
     marginBottom: 12,
   },
   neonText: { color: "#39FF14" },
+  // Sub — web: text-[12.5px], leading-snug, mt-3=12px above, mt-7=28px below
   heroSub: {
     color: "rgba(255,255,255,0.50)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 20,
+    fontFamily: BODY.regular,
+    fontSize: 12.5,
+    lineHeight: 18,
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 28,
   },
 
-  // Benefits grid — 2×2 on mobile
+  // Benefits grid — web: grid-cols-4 gap-2 (4 cards in ONE row), mt-7=28px below
   benefitsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 24,
+    gap: 6,
+    marginBottom: 28,
   },
+  // Each card: flex:1 so 4 fill the row equally; web py-4=16px px-1=4px rounded-2xl
   benefitCard: {
-    width: "47.5%",
+    flex: 1,
     alignItems: "center",
-    gap: 10,
-    borderRadius: 16,
+    gap: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.35)",
     backgroundColor: "rgba(57,255,20,0.04)",
-    paddingVertical: 16,
-    paddingHorizontal: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
     shadowColor: "#39FF14",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
   },
+  // web: text-[10.5px] leading-tight font-bold
   benefitText: {
     color: "#fff",
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
+    fontFamily: MONO.regular,
+    fontSize: 10,
     textAlign: "center",
-    lineHeight: 16,
+    lineHeight: 14,
   },
 
-  // VSL thumbnail — 16:9, neon border, play button
+  // VSL thumbnail — web: mt-7=28px above, aspect-video rounded-2xl; mt-6=24px below
   vslThumb: {
     width: "100%",
     aspectRatio: 16 / 9,
@@ -273,22 +277,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#0a0a0a",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 24,
     shadowColor: "#39FF14",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
   },
   playCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#39FF14",
     justifyContent: "center",
     alignItems: "center",
   },
 
-  // Primary CTA — neon bg, black text, play icon in black circle
+  // Primary CTA — web: py-5=20px, text-base=16px, rounded-2xl, gap-2.5=10px, mt-4=16px below
   primaryCta: {
     width: "100%",
     backgroundColor: "#39FF14",
@@ -296,7 +300,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    paddingVertical: 18,
+    paddingVertical: 20,
     borderRadius: 16,
     shadowColor: "#39FF14",
     shadowOffset: { width: 0, height: 0 },
@@ -304,6 +308,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     marginBottom: 16,
   },
+  // web: w-9 h-9 = 36px circle
   playIconCircle: {
     width: 36,
     height: 36,
@@ -312,14 +317,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  // web: text-base=16px font-black
   primaryCtaText: {
     color: "#000",
-    fontFamily: "Inter_900Black",
-    fontSize: 15,
-    letterSpacing: 0.2,
+    fontFamily: DISPLAY.bold,
+    fontSize: 16,
+    letterSpacing: 0.1,
   },
 
-  // Lock microcopy
+  // Lock microcopy — web: text-base=16px, mt-4=16px above, mt-7=28px below
   microcopyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -329,11 +335,11 @@ const styles = StyleSheet.create({
   },
   microcopyText: {
     color: "rgba(255,255,255,0.60)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
+    fontFamily: BODY.regular,
+    fontSize: 15,
   },
 
-  // Footer CTA — subtle, triggers payment
+  // Footer CTA — web: text-sm=14px, gap-2=8px
   footerCta: {
     flexDirection: "row",
     alignItems: "center",
@@ -343,7 +349,7 @@ const styles = StyleSheet.create({
   },
   footerCtaText: {
     color: "rgba(255,255,255,0.45)",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontFamily: BODY.regular,
+    fontSize: 14,
   },
 });
