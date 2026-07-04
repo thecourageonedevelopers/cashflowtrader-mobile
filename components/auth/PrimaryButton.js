@@ -1,45 +1,46 @@
 import React from "react";
-import { StyleSheet } from "react-native";
-import { Button } from "react-native-paper";
+import { TouchableOpacity, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { PRIMARY } from "./AuthStyles";
+import { DISPLAY } from "../../src/theme/typography";
 
 export default function PrimaryButton({
   children,
   onPress,
   style,
   labelStyle,
-  contentStyle,
   loading = false,
   disabled = false,
 }) {
   return (
-    <Button
-      mode="contained"
-      buttonColor={PRIMARY}
-      textColor="#000"
-      style={[styles.button, style]}
-      contentStyle={[styles.content, contentStyle]}
-      labelStyle={[styles.label, labelStyle]}
+    <TouchableOpacity
+      style={[s.btn, (loading || disabled) && s.btnDisabled, style]}
       onPress={onPress}
-      loading={loading}
-      disabled={disabled || loading}
+      disabled={loading || disabled}
+      activeOpacity={0.85}
     >
-      {children}
-    </Button>
+      {loading ? (
+        <ActivityIndicator size="small" color="#000" />
+      ) : (
+        <Text style={[s.label, labelStyle]}>{children}</Text>
+      )}
+    </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    borderRadius: 12,
+const s = StyleSheet.create({
+  btn: {
+    backgroundColor: PRIMARY,
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    marginTop: 8,
   },
-
-  content: {
-    height: 58,
-  },
-
+  btnDisabled: { opacity: 0.6 },
   label: {
-    fontWeight: "800",
-    fontSize: 18,
+    color: "#000",
+    fontFamily: DISPLAY.bold,
+    fontSize: 15,
   },
 });

@@ -1,92 +1,81 @@
-import React, { useState } from "react";
-import {
-  TouchableOpacity,
-  Text,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import * as Linking from "expo-linking";
+import React, { useState, useEffect } from "react";
+import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, Alert } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
 import { useAuth } from "../../src/context/AuthContext";
+import { BODY } from "../../src/theme/typography";
 
-const OAUTH_BASE_URL = "https://auth.emergentagent.com/";
+// Required by expo-auth-session to complete the OAuth session on Android/web.
+WebBrowser.maybeCompleteAuthSession();
 
-/**
- * "Continue with Google" button shared by every auth screen.
- * Handles the full OAuth flow internally:
- *   1. Builds a dynamic redirect URL (scheme-aware for Expo Go / standalone)
- *   2. Opens an in-app browser pointed at the Emergent OAuth endpoint
- *   3. Extracts session_id from the redirect hash
- *   4. Calls loginWithSession() — AuthContext stores the JWT and sets user
- *   5. RootNavigator reacts to user state change automatically
- *
- * The `style` prop overrides only visual properties (height, borderColor).
- * The deprecated `onPress` prop is kept for API compatibility but is unused.
- */
+function GoogleIcon() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 48 48" fill="none">
+      <Path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35.5 24 35.5c-6.4 0-11.5-5.2-11.5-11.5S17.6 12.5 24 12.5c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.8 6.4 29.2 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.3-3.5z" />
+      <Path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 12.5 24 12.5c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.8 6.4 29.2 4.5 24 4.5 16.3 4.5 9.6 8.8 6.3 14.7z" />
+      <Path fill="#4CAF50" d="M24 43.5c5.1 0 9.7-1.9 13.2-5l-6.1-5c-2 1.4-4.5 2.2-7.1 2.2-5.3 0-9.7-3.1-11.3-7.5l-6.5 5C9.6 39.2 16.3 43.5 24 43.5z" />
+      <Path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.3 4-4.1 5.2l6.1 5C40.4 35.6 43.5 30.2 43.5 24c0-1.2-.1-2.3-.3-3.5z" />
+    </Svg>
+  );
+}
+
 export default function GoogleButton({ style }) {
-  const { loginWithSession } = useAuth();
+  const { googleLogin } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const handlePress = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      // ── DEBUG 1 & 2: redirect + auth URLs ─────────────────────────────
-      const redirectUrl = Linking.createURL("auth/callback");
-      console.log("[OAuth] 1. redirectUrl:", redirectUrl);
+  // useIdTokenAuthRequest fetches a Google ID token via OAuth implicit flow.
+  // The id_token it returns is structurally identical to the `credential` that
+  // Google Identity Services delivers on the web — so the same backend endpoint
+  // POST /auth/google { credential } works without any changes.
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+      clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+      androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  });
 
-      const authUrl = `${OAUTH_BASE_URL}?redirect=${encodeURIComponent(redirectUrl)}`;
-      console.log("[OAuth] 2. authUrl:", authUrl);
+  // Handle the OAuth result. `response` is set by expo-auth-session after the
+  // browser session completes. We watch it in an effect because promptAsync()
+  // is asynchronous and the hook updates `response` out-of-band.
+  useEffect(() => {
+    if (response?.type !== "success") return;
 
-      // ── DEBUG 3: openAuthSessionAsync result ───────────────────────────
-      console.log("[OAuth] 3. Opening browser...");
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
-      console.log("[OAuth] 3. result.type :", result.type);
-      console.log("[OAuth] 3. result.url  :", result.url ?? "(none)");
-      console.log("[OAuth] 3. full result :", JSON.stringify(result));
-
-      if (result.type !== "success") {
-        console.warn("[OAuth] 4. STOPPED — result.type is not 'success', got:", result.type,
-          "\n    If type='dismiss': app is probably running on Expo Web (COOP blocks window.closed).",
-          "\n    Test on a physical device or simulator instead.");
-        return;
-      }
-
-      // ── DEBUG 4: session_id extraction ─────────────────────────────────
-      console.log("[OAuth] 4. result.url to parse:", result.url);
-      const match = result.url.match(/session_id=([^&\s#]+)/);
-      console.log("[OAuth] 4. regex match:", match ? `session_id=${match[1]}` : "NO MATCH — session_id not found in URL");
-
-      if (!match) {
-        console.error("[OAuth] 4. STOPPED — no session_id in callback URL.");
-        return;
-      }
-
-      // ── DEBUG 5 & 6: loginWithSession call ─────────────────────────────
-      console.log("[OAuth] 5. Calling loginWithSession with session_id:", match[1]);
-      const authedUser = await loginWithSession(match[1]);
-      console.log("[OAuth] 6. loginWithSession returned user:", authedUser?.email ?? JSON.stringify(authedUser));
-    } catch (e) {
-      console.error("[OAuth] CAUGHT:", e?.message ?? String(e));
-      console.error("[OAuth] Error detail:", JSON.stringify(e?.response?.data ?? {}));
-    } finally {
-      setLoading(false);
+    const idToken = response.params?.id_token;
+    if (!idToken) {
+      console.error("[OAuth] id_token missing in response params:", response.params);
+      return;
     }
-  };
+
+    let active = true;
+    setLoading(true);
+
+    googleLogin(idToken)
+      .catch((e) => {
+        if (!active) return;
+        console.error("[OAuth] POST /auth/google failed:", e?.message ?? String(e));
+        Alert.alert(
+          "Sign-in failed",
+          e?.response?.data?.detail || "Google sign-in failed. Please try again.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [response, googleLogin]);
 
   return (
     <TouchableOpacity
       style={[styles.button, style]}
-      onPress={handlePress}
-      disabled={loading}
+      onPress={() => promptAsync()}
+      disabled={loading || !request}
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator size="small" color="#fff" />
+        <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" />
       ) : (
         <>
-          <Ionicons name="logo-google" size={20} color="#ffffff" />
+          <GoogleIcon />
           <Text style={styles.text}>Continue with Google</Text>
         </>
       )}
@@ -96,19 +85,20 @@ export default function GoogleButton({ style }) {
 
 const styles = StyleSheet.create({
   button: {
-    height: 58,
+    width: "100%",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: "#252525",
-    borderRadius: 12,
+    borderColor: "rgba(255,255,255,0.15)",
+    borderRadius: 8,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
   },
-
   text: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    fontFamily: BODY.regular,
+    fontSize: 14,
   },
 });

@@ -23,13 +23,14 @@ import React, { memo, useMemo } from "react";
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { PRIMARY, authBaseStyles } from "../auth/AuthStyles";
+import { PRIMARY } from "../auth/AuthStyles";
 import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import DrawerItem from "./DrawerItem";
 import { useAuth } from "../../src/context/AuthContext";
@@ -82,10 +83,12 @@ export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, per
       {/* ── Header: logo + close button ── */}
       <View style={s.header}>
         <View style={s.logoRow}>
-          <View style={authBaseStyles.logoBox}>
-            <Text style={authBaseStyles.logoLetter}>C</Text>
-          </View>
-          <Text style={authBaseStyles.brandText}>
+          <Image
+            source={require("../../assets/adaptive-icon.png")}
+            style={s.logoImg}
+            resizeMode="contain"
+          />
+          <Text style={s.brandText}>
             Cashflow <Text style={{ color: NEON }}>Trader</Text>
           </Text>
         </View>
@@ -205,6 +208,21 @@ const s = StyleSheet.create({
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+  },
+
+  // Logo image — web: w-11 h-11 rounded-lg = 44×44
+  logoImg: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+  },
+
+  // Brand text — web: font-display font-bold text-xl = 20px
+  brandText: {
+    color: "#fff",
+    fontFamily: DISPLAY.bold,
+    fontSize: 20,
   },
 
   // Profile card — web: px-4 pt-2 wrapper, inner: p-4 rounded-md border border-white/10 bg-white/[0.02]

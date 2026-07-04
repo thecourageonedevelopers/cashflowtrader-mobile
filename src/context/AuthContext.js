@@ -7,7 +7,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import * as Linking from "expo-linking";
 import { authApi } from "../api/auth";
 import client, { setUnauthorizedHandler } from "../api/client";
 import { queryClient } from "../api/queryClient";
@@ -45,48 +44,14 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // OAuth deep-link: exchanges a session_id (from Emergent redirect) for a JWT.
-  // Declared before the init useEffect so it can be safely listed in deps.
-  const loginWithSession = useCallback(async (session_id) => {
-    console.log("[Auth] 6. loginWithSession START — session_id:", session_id);
-    const { data } = await authApi.session(session_id);
-    console.log("[Auth] 7. POST /auth/session response keys:", Object.keys(data ?? {}));
-    console.log("[Auth] 7. token present:", !!data?.token);
-    console.log("[Auth] 7. user:", JSON.stringify(data?.user ?? null));
-    await tokenService.set(data.token);
-    console.log("[Auth] 7. Token stored in AsyncStorage.");
-    setUser(data.user);
-    console.log("[Auth] 7. setUser called — user email:", data.user?.email);
-    return data.user;
-  }, []);
-
-  // ── Startup init + OAuth deep-link guard ────────────────────────────────
+  // ── Startup init ────────────────────────────────────────────────────────
   useEffect(() => {
-    // Foreground deep-link listener: catches the OAuth redirect when the app is
-    // already running (Android Chrome Custom Tabs fires a Linking event on return).
-    const sub = Linking.addEventListener("url", async ({ url }) => {
-      if (!url?.includes("session_id=")) return;
-      const m = url.match(/session_id=([^&\s#]+)/);
-      if (m) { try { await loginWithSession(m[1]); } catch {} }
-    });
-
     const init = async () => {
-      // Cold-start guard: mirrors the web's window.location.hash check in AuthContext.jsx.
-      // If the app was opened FROM an OAuth deep link (cashflowtrader://auth/callback#session_id=…),
-      // skip GET /auth/me — no token exists yet. Exchange the session_id directly instead.
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl?.includes("session_id=")) {
-        const m = initialUrl.match(/session_id=([^&\s#]+)/);
-        if (m) { try { await loginWithSession(m[1]); } catch {} }
-      } else {
-        await checkAuth();
-      }
+      await checkAuth();
       setLoading(false);
     };
-
     init();
-    return () => sub.remove();
-  }, [checkAuth, loginWithSession]);
+  }, [checkAuth]);
 
   // ── Register forced-logout handler with the Axios interceptor ───────────
   // Fires when any response returns 401 (expired/invalid token).
@@ -115,24 +80,25 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
+  // Mirrors web googleLoginThunk: POST /auth/google { credential } → store JWT → set user.
+  // credential is the Google ID token received from expo-auth-session.
+  const googleLogin = useCallback(async (credential) => {
+    const { data } = await authApi.googleLogin(credential);
+    await tokenService.set(data.token);
+    setUser(data.user);
+    return data.user;
+  }, []);
+
   const logout = useCallback(async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // best-effort server-side session teardown
-    } finally {
-      await tokenService.remove();
-      queryClient.clear();
-      setUser(null);
-    }
+    // Mirror web authSlice: fire session/logout first (best-effort), then auth/logout.
+    try { await authApi.sessionLogout(); } catch {}
+    try { await authApi.logout(); } catch {}
+    await tokenService.remove();
+    queryClient.clear();
+    setUser(null);
   }, []);
 
   // ── Derived flags ───────────────────────────────────────────────────────
-  // useMemo ensures the context value object is only recreated when user or
-  // loading actually change. All action callbacks (login, logout, etc.) are
-  // useCallback-stable, so they do not contribute to spurious re-renders of
-  // every useAuth() consumer (AppDrawer, all screens) on unrelated re-renders
-  // of AuthProvider such as deep-link listener effects.
   const value = useMemo(() => ({
     user,
     setUser,
@@ -141,8 +107,8 @@ export function AuthProvider({ children }) {
     // Actions
     login,
     register,
+    googleLogin,
     logout,
-    loginWithSession,
     checkAuth,
     refresh: checkAuth,
 
@@ -153,7 +119,7 @@ export function AuthProvider({ children }) {
     isOnboarded: user?.onboarded === true,
     hasChallengeAccess: user?.challenge_unlocked === true,
     hasCommunityAccess: user?.community_access === true,
-  }), [user, loading, login, register, logout, loginWithSession, checkAuth, setUser]);
+  }), [user, loading, login, register, googleLogin, logout, checkAuth, setUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

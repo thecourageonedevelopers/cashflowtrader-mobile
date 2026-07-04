@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as WebBrowser from "expo-web-browser";
+import RazorpayCheckout from "react-native-razorpay";
 import { PRIMARY } from "../auth/AuthStyles";
 import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import { useAuth } from "../../src/hooks/useAuth";
@@ -21,7 +21,7 @@ const BENEFITS = [
 ];
 
 export default function ChallengeLanding({ data, onPurchased }) {
-  const { checkAuth } = useAuth();
+  const { user, checkAuth } = useAuth();
   const { showAlert } = useAlert();
   const [busy, setBusy] = useState(false);
 
@@ -47,11 +47,13 @@ export default function ChallengeLanding({ data, onPurchased }) {
     });
   };
 
-  // Payment / unlock — mirrors web ChallengeLanding handleUnlock
+  // Payment / unlock — mirrors web Challenge.jsx handleBuy with react-native-razorpay
   const handleUnlock = async () => {
     setBusy(true);
     try {
       const order = await challengeApi.createOrder().then((r) => r.data);
+
+      // Mock mode (test/dev environment) — skip checkout, verify directly
       if (order.mock) {
         await challengeApi.verifyPayment(
           order.order_id,
@@ -67,22 +69,42 @@ export default function ChallengeLanding({ data, onPurchased }) {
         onPurchased?.();
         return;
       }
-      if (order.checkout_url) {
-        await WebBrowser.openBrowserAsync(order.checkout_url);
-        await checkAuth();
-        onPurchased?.();
-      } else {
-        showAlert({
-          type: "info",
-          title: "Complete Purchase",
-          message: "Visit cashflowtrader.in to complete your purchase, then return to the app.",
-        });
-      }
+
+      // Real Razorpay native checkout (mirrors web new Razorpay({...}).open())
+      const paymentData = await RazorpayCheckout.open({
+        name: "Cashflow Trader",
+        description: "21-Day Discipline Challenge",
+        order_id: order.order_id,
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+        },
+        theme: { color: "#39FF14" },
+      });
+
+      // Verify signature on server (mirrors web handler: async (res) => { api.post("/payments/verify", ...) })
+      await challengeApi.verifyPayment(
+        paymentData.razorpay_order_id,
+        paymentData.razorpay_payment_id,
+        paymentData.razorpay_signature
+      );
+      showAlert({
+        type: "success",
+        title: "Challenge Unlocked",
+        message: "Challenge unlocked. Let's go.",
+      });
+      await checkAuth();
+      onPurchased?.();
     } catch (e) {
+      // code 0 = user dismissed / cancelled — no error toast needed (mirrors web modal.ondismiss)
+      if (e?.code === 0) return;
       showAlert({
         type: "error",
-        title: "Error",
-        message: e?.response?.data?.detail || "Could not start payment",
+        title: "Payment Failed",
+        message: e?.response?.data?.detail || e?.description || "Could not start payment",
       });
     } finally {
       setBusy(false);

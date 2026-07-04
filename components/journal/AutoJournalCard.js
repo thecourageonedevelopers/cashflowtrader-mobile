@@ -383,7 +383,7 @@ export default function AutoJournalCard({ onImported, onNavigateToNew }) {
     setUploading(true);
     try {
       const fd = new FormData();
-      fd.append("file", {
+      fd.append("image", {
         uri: asset.uri,
         type: asset.mimeType || "image/jpeg",
         name: asset.fileName || "screenshot.jpg",

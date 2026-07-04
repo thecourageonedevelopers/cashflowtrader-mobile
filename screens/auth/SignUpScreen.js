@@ -4,28 +4,26 @@ import {
   Text,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
-  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { TextInput } from "react-native-paper";
-import { Ionicons } from "@expo/vector-icons";
 
 import { PRIMARY, authBaseStyles } from "../../components/auth/AuthStyles";
+import AuthBackground from "../../components/auth/AuthBackground";
 import AuthHeader from "../../components/auth/AuthHeader";
-import AuthCard from "../../components/auth/AuthCard";
+import AuthInput from "../../components/auth/AuthInput";
 import GoogleButton from "../../components/auth/GoogleButton";
 import AuthDivider from "../../components/auth/AuthDivider";
 import PrimaryButton from "../../components/auth/PrimaryButton";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import { useAuth } from "../../src/hooks/useAuth";
 import { extractApiError } from "../../src/utils/apiError";
 
+// Mirrors web Register.jsx validation constants exactly
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_RE  = /^[A-Za-z\s]+$/;
+
 export default function SignUpScreen({ navigation }) {
-  const { width } = useWindowDimensions();
-
-  const cardWidth = width > 768 ? 420 : width - 24;
-
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +34,20 @@ export default function SignUpScreen({ navigation }) {
   const { register } = useAuth();
 
   const handleSignUp = async () => {
-    if (!fullName.trim() || !email.trim() || !password) {
+    // Validation order mirrors web Register.jsx exactly
+    if (fullName.trim().length < 2) {
+      setError("Please enter your full name.");
+      return;
+    }
+    if (!NAME_RE.test(fullName.trim())) {
+      setError("Name can only contain letters and spaces.");
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (!password) {
       setError("Please fill in all fields.");
       return;
     }
@@ -58,256 +69,183 @@ export default function SignUpScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <View style={styles.root}>
+      <AuthBackground />
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior="padding"
         >
-          <AuthHeader
-            rightText="Sign In →"
-            onRightPress={() =>
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "SignIn" }],
-              })
-            }
-            style={styles.header}
-            rightTextStyle={styles.rightLink}
-          />
-
-          <AuthCard
-            cardWidth={cardWidth}
-            wrapperStyle={styles.cardWrapper}
-            cardStyle={styles.card}
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {/* Badge */}
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>START FREE</Text>
-            </View>
-
-            {/* Title */}
-            <Text style={styles.title}>
-              Become the trader{"\n"}
-              <Text style={{ color: PRIMARY }}>you respect.</Text>
-            </Text>
-
-            <Text style={styles.subtitle}>
-              Create your account. Onboarding takes under a minute.
-            </Text>
-
-            <GoogleButton
-              onPress={() => {}}
-              style={styles.googleButton}
-            />
-
-            <AuthDivider
-              style={styles.divider}
-              textStyle={styles.dividerText}
-            />
-
-            {/* Full Name */}
-            <Text style={[authBaseStyles.label, styles.label]}>FULL NAME</Text>
-
-            <TextInput
-              mode="outlined"
-              value={fullName}
-              onChangeText={(v) => { setFullName(v); setError(""); }}
-              placeholder="Arjun Mehra"
-              placeholderTextColor="#555"
-              style={styles.input}
-              textColor="#ffffff"
-              outlineColor="#222"
-              activeOutlineColor={PRIMARY}
-              outlineStyle={{ borderRadius: 12 }}
-            />
-
-            {/* Email */}
-            <Text style={[authBaseStyles.label, styles.label]}>EMAIL</Text>
-
-            <TextInput
-              mode="outlined"
-              value={email}
-              onChangeText={(v) => { setEmail(v); setError(""); }}
-              placeholder="you@trader.com"
-              placeholderTextColor="#555"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={styles.input}
-              textColor="#ffffff"
-              outlineColor="#222"
-              activeOutlineColor={PRIMARY}
-              outlineStyle={{ borderRadius: 12 }}
-            />
-
-            {/* Password */}
-            <Text style={[authBaseStyles.label, styles.label]}>PASSWORD</Text>
-
-            <TextInput
-              mode="outlined"
-              value={password}
-              onChangeText={(v) => { setPassword(v); setError(""); }}
-              secureTextEntry={!showPassword}
-              placeholder="Min 6 characters"
-              placeholderTextColor="#555"
-              style={styles.input}
-              textColor="#ffffff"
-              outlineColor="#222"
-              activeOutlineColor={PRIMARY}
-              outlineStyle={{ borderRadius: 12 }}
-              right={
-                <TextInput.Icon
-                  icon={() => (
-                    <Ionicons
-                      name={showPassword ? "eye-outline" : "eye-off-outline"}
-                      size={20}
-                      color="#666"
-                    />
-                  )}
-                  onPress={() => setShowPassword(!showPassword)}
-                />
+            {/* Nav bar — logo left, Sign In link right (matches web Register) */}
+            <AuthHeader
+              rightText="Sign In →"
+              onRightPress={() =>
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: "SignIn" }],
+                })
               }
             />
 
-            <PrimaryButton
-              onPress={handleSignUp}
-              loading={loading}
-              disabled={loading}
-              style={styles.createButton}
-              labelStyle={{ fontSize: 17 }}
-            >
-              Create Account →
-            </PrimaryButton>
+            {/* Card — glass-strong */}
+            <View style={styles.card}>
+              <View style={styles.chip}>
+                <Text style={styles.chipText}>Start Free</Text>
+              </View>
 
-            {/* API error */}
-            {!!error && (
-              <Text style={styles.errorText}>{error}</Text>
-            )}
-
-            {/* Footer */}
-            <Text style={[authBaseStyles.footerText, styles.footerText]}>
-              Already have an account?{" "}
-              <Text
-                style={authBaseStyles.footerLink}
-                onPress={() =>
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: "SignIn" }],
-                  })
-                }
-              >
-                Sign in
+              <Text style={styles.title}>
+                Become the trader{"\n"}
+                <Text style={{ color: PRIMARY }}>you respect.</Text>
               </Text>
-            </Text>
-          </AuthCard>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              <Text style={styles.subtitle}>
+                Create your account. Onboarding takes under a minute.
+              </Text>
+
+              <GoogleButton />
+
+              <AuthDivider />
+
+              <Text style={authBaseStyles.label}>FULL NAME</Text>
+              <AuthInput
+                value={fullName}
+                onChangeText={(v) => {
+                  // Mirror web Register.jsx: strip non-letter/space chars inline
+                  setFullName(v.replace(/[^A-Za-z\s]/g, ""));
+                  setError("");
+                }}
+                placeholder="Arjun Mehra"
+                autoCapitalize="words"
+                autoCorrect={false}
+                leftIcon="person-outline"
+              />
+
+              <Text style={authBaseStyles.label}>EMAIL</Text>
+              <AuthInput
+                value={email}
+                onChangeText={(v) => { setEmail(v); setError(""); }}
+                placeholder="you@trader.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                leftIcon="mail-outline"
+              />
+
+              <Text style={authBaseStyles.label}>PASSWORD</Text>
+              <AuthInput
+                value={password}
+                onChangeText={(v) => { setPassword(v); setError(""); }}
+                placeholder="Min 6 characters"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                leftIcon="lock-closed-outline"
+                rightIcon={showPassword ? "eye-outline" : "eye-off-outline"}
+                onRightPress={() => setShowPassword(!showPassword)}
+              />
+
+              <PrimaryButton
+                onPress={handleSignUp}
+                loading={loading}
+                disabled={loading}
+                style={{ marginTop: 18 }}
+              >
+                Create Account →
+              </PrimaryButton>
+
+              {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+              <Text style={[authBaseStyles.footerText, styles.footer]}>
+                Already have an account?{" "}
+                <Text
+                  style={authBaseStyles.footerLink}
+                  onPress={() =>
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: "SignIn" }],
+                    })
+                  }
+                >
+                  Sign in
+                </Text>
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: "#050505",
+    backgroundColor: "#000",
   },
-
-  scrollContainer: {
+  scroll: {
     flexGrow: 1,
-    paddingHorizontal: 12,
-    paddingBottom: 30,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
 
-  header: {
-    marginTop: 20,
-  },
-
-  rightLink: {
-    fontWeight: "500",
-  },
-
-  cardWrapper: {
-    marginTop: 40,
-  },
-
+  // Card — glass-strong
   card: {
-    borderColor: "#181818",
-    padding: 22,
+    backgroundColor: "rgba(10,10,10,0.9)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    padding: 28,
+    marginTop: 8,
   },
 
-  badge: {
+  // Chip
+  chip: {
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: PRIMARY,
-    borderRadius: 30,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderColor: "rgba(57,255,20,0.3)",
+    backgroundColor: "rgba(57,255,20,0.08)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 20,
   },
-
-  badgeText: {
+  chipText: {
     color: PRIMARY,
+    fontFamily: MONO.regular,
     fontSize: 11,
-    fontWeight: "800",
     letterSpacing: 2,
+    textTransform: "uppercase",
   },
 
   title: {
     color: "#fff",
-    fontSize: 28,
-    fontWeight: "800",
-    marginTop: 18,
+    fontFamily: DISPLAY.extraBold,
+    fontSize: 30,
+    letterSpacing: -0.8,
     lineHeight: 38,
   },
-
   subtitle: {
-    color: "#8a8a8a",
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 12,
-    marginBottom: 25,
-  },
-
-  googleButton: {
-    height: 56,
-    borderColor: "#222",
-  },
-
-  divider: {
-    marginVertical: 22,
-  },
-
-  dividerText: {
-    fontSize: 10,
-  },
-
-  label: {
+    color: "rgba(255,255,255,0.55)",
+    fontFamily: BODY.regular,
+    fontSize: 14,
     marginTop: 8,
-  },
-
-  input: {
-    backgroundColor: "#080808",
-    marginBottom: 10,
-    height: 56,
-  },
-
-  createButton: {
-    marginTop: 18,
+    marginBottom: 24,
+    lineHeight: 20,
   },
 
   errorText: {
-    color: "#ff6b6b",
+    color: "#f87171",
+    fontFamily: BODY.regular,
     fontSize: 13,
     textAlign: "center",
     marginTop: 12,
   },
 
-  footerText: {
-    marginTop: 22,
-    color: "#888",
+  footer: {
+    marginTop: 24,
   },
 });

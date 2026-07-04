@@ -7,13 +7,16 @@ export const authApi = {
   register: (name, email, password) =>
     client.post("/auth/register", { name, email, password }),
 
+  googleLogin: (credential) =>
+    client.post("/auth/google", { credential }),
+
+  // Mirror web authSlice: POST /session/logout before /auth/logout
+  sessionLogout: () =>
+    client.post("/session/logout", { reason: "manual" }),
+
   logout: () =>
     client.post("/auth/logout"),
 
   me: () =>
     client.get("/auth/me"),
-
-  // OAuth deep-link callback: exchange session_id from URL for a JWT token
-  session: (session_id) =>
-    client.post("/auth/session", { session_id }),
 };

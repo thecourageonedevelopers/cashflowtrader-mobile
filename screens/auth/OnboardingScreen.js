@@ -7,10 +7,10 @@ import {
   ScrollView,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
   Animated,
   ActivityIndicator,
   Modal,
+  Image,
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,12 +20,13 @@ import { useAuth } from "../../src/hooks/useAuth";
 import { onboardingApi } from "../../src/api/onboarding";
 import { extractApiError } from "../../src/utils/apiError";
 import { useAlert } from "../../src/context/AlertContext";
+import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const NEON = "#39FF14";
 const BG = "#050505";
 const SURFACE = "#0a0a0a";
-const BORDER = "#1c1c1c";
+const BORDER = "rgba(255,255,255,0.10)";
 
 // ─── Currency helpers ─────────────────────────────────────────────────────────
 const CUR_SYM = { INR: "₹", USD: "$" };
@@ -265,7 +266,7 @@ export default function OnboardingScreen() {
       return Array.isArray(v) ? v.length > 0 : v !== undefined && v !== "" && v !== null;
     }
     if (step.type === "slider") return true;
-    if (step.type === "mobile") return digitsOnly(String(value || "")).length >= 7;
+    if (step.type === "mobile") return digitsOnly(String(value || "")).length >= 8;
     if (step.key === "full_name") return onlyLetters(String(value)).trim().length >= 2;
     if (step.type === "email") return true;
     return String(value).trim().length > 0;
@@ -374,9 +375,7 @@ export default function OnboardingScreen() {
           >
             {/* Brand header */}
             <View style={s.logoRow}>
-              <View style={s.logoBox}>
-                <Text style={s.logoLetter}>C</Text>
-              </View>
+              <Image source={require("../../assets/adaptive-icon.png")} style={s.logoImg} resizeMode="contain" />
               <Text style={s.logoBrand}>
                 Cashflow <Text style={s.logoGreen}>Trader</Text>
               </Text>
@@ -438,28 +437,21 @@ export default function OnboardingScreen() {
   // ── Step screens ───────────────────────────────────────────────────────────
   return (
     <View style={s.root}>
-      {/* Neon progress track — full width at very top */}
-      <View style={s.progressTrack}>
-        <Animated.View style={[s.progressFill, { width: progressWidth }]} />
-      </View>
-
       <SafeAreaView style={s.flex}>
         <KeyboardAvoidingView
           style={s.flex}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior="padding"
           keyboardVerticalOffset={0}
         >
-          {/* Header: logo | back button + step counter */}
+          {/* Header: brand logo row above; progress bar + back + counter below (mirrors web) */}
           <View style={s.header}>
             <View style={s.logoRow}>
-              <View style={s.logoBox}>
-                <Text style={s.logoLetter}>C</Text>
-              </View>
+              <Image source={require("../../assets/adaptive-icon.png")} style={s.logoImg} resizeMode="contain" />
               <Text style={s.logoBrand}>
                 Cashflow <Text style={s.logoGreen}>Trader</Text>
               </Text>
             </View>
-            <View style={s.headerRight}>
+            <View style={s.progressRow}>
               <TouchableOpacity
                 onPress={goBack}
                 disabled={stepIdx === 0}
@@ -467,6 +459,9 @@ export default function OnboardingScreen() {
               >
                 <Ionicons name="arrow-back" size={18} color={stepIdx === 0 ? "#333" : "#888"} />
               </TouchableOpacity>
+              <View style={s.progressTrack}>
+                <Animated.View style={[s.progressFill, { width: progressWidth }]} />
+              </View>
               <Text style={s.stepCounter}>{stepIdx + 1}/{STEPS.length}</Text>
             </View>
           </View>
@@ -848,34 +843,31 @@ const s = StyleSheet.create({
   flex: { flex: 1 },
   center: { justifyContent: "center", alignItems: "center" },
 
-  // ── Progress track ──
+  // ── Progress bar — now inline inside header progressRow (matches web) ──
   progressTrack: {
-    height: 3,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    width: "100%",
+    flex: 1,
+    height: 8,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 999,
+    overflow: "hidden",
   },
   progressFill: {
     height: "100%",
     backgroundColor: NEON,
-    shadowColor: NEON,
-    shadowOpacity: 0.7,
-    shadowRadius: 6,
-    elevation: 3,
+    borderRadius: 999,
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 
   // ── Header ──
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 14,
-    paddingBottom: 10,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+    paddingBottom: 12,
+    gap: 14,
   },
   backIconBtn: {
     width: 36,
@@ -890,10 +882,8 @@ const s = StyleSheet.create({
   backIconBtnDisabled: { opacity: 0.25 },
   stepCounter: {
     color: "rgba(255,255,255,0.35)",
+    fontFamily: MONO.regular,
     fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-    fontVariant: ["tabular-nums"],
     minWidth: 32,
     textAlign: "right",
   },
@@ -902,18 +892,14 @@ const s = StyleSheet.create({
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
-  logoBox: {
-    width: 32,
-    height: 32,
+  logoImg: {
+    width: 36,
+    height: 36,
     borderRadius: 8,
-    backgroundColor: NEON,
-    justifyContent: "center",
-    alignItems: "center",
   },
-  logoLetter: { color: "#000", fontSize: 18, fontWeight: "900" },
-  logoBrand: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  logoBrand: { color: "#fff", fontFamily: DISPLAY.bold, fontSize: 16 },
   logoGreen: { color: NEON },
 
   // ── Scroll ──
@@ -950,9 +936,10 @@ const s = StyleSheet.create({
   },
   badgeText: {
     color: NEON,
+    fontFamily: MONO.regular,
     fontSize: 9,
-    fontWeight: "800",
     letterSpacing: 1.8,
+    textTransform: "uppercase",
   },
 
   // ── Currency toggle ──
@@ -988,14 +975,15 @@ const s = StyleSheet.create({
   // ── Question ──
   question: {
     color: "#fff",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 26,
-    fontWeight: "900",
     lineHeight: 34,
     letterSpacing: -0.3,
     marginBottom: 8,
   },
   subText: {
     color: "rgba(255,255,255,0.5)",
+    fontFamily: BODY.regular,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 6,
@@ -1008,6 +996,7 @@ const s = StyleSheet.create({
   },
   noteText: {
     color: "rgba(255,255,255,0.45)",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 18,
     flex: 1,
@@ -1045,12 +1034,12 @@ const s = StyleSheet.create({
   },
   choiceText: {
     color: "rgba(255,255,255,0.75)",
+    fontFamily: BODY.medium,
     fontSize: 15,
-    fontWeight: "500",
   },
   choiceTextActive: {
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: BODY.semiBold,
   },
 
   // ── Slider ──
@@ -1060,15 +1049,14 @@ const s = StyleSheet.create({
   },
   sliderValue: {
     color: NEON,
+    fontFamily: MONO.bold,
     fontSize: 40,
-    fontWeight: "900",
     letterSpacing: -1,
-    fontVariant: ["tabular-nums"],
   },
   sliderLabel: {
     color: "rgba(255,255,255,0.35)",
+    fontFamily: MONO.regular,
     fontSize: 10,
-    fontWeight: "600",
     letterSpacing: 2,
     textTransform: "uppercase",
     marginTop: 4,
@@ -1229,8 +1217,8 @@ const s = StyleSheet.create({
   },
   neonBtnText: {
     color: "#000",
+    fontFamily: DISPLAY.bold,
     fontSize: 16,
-    fontWeight: "800",
     letterSpacing: 0.2,
   },
 
@@ -1244,8 +1232,8 @@ const s = StyleSheet.create({
   },
   privacyText: {
     color: "rgba(255,255,255,0.35)",
+    fontFamily: BODY.regular,
     fontSize: 11,
-    fontWeight: "500",
   },
   privacyRowBottom: {
     flexDirection: "row",
@@ -1273,8 +1261,8 @@ const s = StyleSheet.create({
   },
   welcomeHeading: {
     color: "#fff",
+    fontFamily: DISPLAY.extraBold,
     fontSize: 30,
-    fontWeight: "900",
     lineHeight: 38,
     letterSpacing: -0.5,
     marginBottom: 10,
@@ -1282,6 +1270,7 @@ const s = StyleSheet.create({
   neonText: { color: NEON },
   welcomeSub: {
     color: "rgba(255,255,255,0.5)",
+    fontFamily: BODY.regular,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 28,
@@ -1306,12 +1295,13 @@ const s = StyleSheet.create({
   featureText: { flex: 1 },
   featureTitle: {
     color: "#fff",
+    fontFamily: DISPLAY.bold,
     fontSize: 15,
-    fontWeight: "700",
     marginBottom: 3,
   },
   featureDesc: {
     color: "rgba(255,255,255,0.5)",
+    fontFamily: BODY.regular,
     fontSize: 13,
     lineHeight: 18,
   },

@@ -1,13 +1,18 @@
 import client from "./client";
 
 export const supportApi = {
-  // data: { name, email, mobile, reason, request_type }
-  // request_type: "support_call" | "mentorship" | "account_opening" | "one_on_one"
-  submit: (data) => client.post("/support", data),
+  // req: { subject*, description*, category? }
+  // subject  = request type label (e.g. "Request Support Call")
+  // description = user's reason/details
+  // category = request_type key (e.g. "support_call")
+  submit: (data) => client.post("/support/tickets", data),
 
-  // Returns { requests: [...] } — each request has embedded .replies[]
-  list: () => client.get("/support/my"),
+  // res: [{ ticketId, subject, category, priority, status, createdAt }]
+  list: () => client.get("/support/tickets"),
 
-  // Sends a user reply to an existing request thread
-  reply: (requestId, message) => client.post(`/support/${requestId}/reply`, { message }),
+  // res: { ticketId, subject, description, category, priority, status, replies[], createdAt }
+  getTicket: (ticketId) => client.get(`/support/tickets/${ticketId}`),
+
+  // req: { content* }
+  reply: (ticketId, content) => client.post(`/support/tickets/${ticketId}/replies`, { content }),
 };

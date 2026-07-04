@@ -20,7 +20,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import ScreenLayout from "../components/common/ScreenLayout";
 import AvatarStudio from "../components/common/AvatarStudio";
-import { PRIMARY, authBaseStyles } from "../components/auth/AuthStyles";
+import WelcomeTour from "../components/common/WelcomeTour";
+import { PRIMARY } from "../components/auth/AuthStyles";
 import { useAuth } from "../src/hooks/useAuth";
 import { useMoney } from "../src/hooks/useMoney";
 import { useAvatarUrl } from "../src/lib/avatar";
@@ -474,8 +475,8 @@ export default function OverviewScreen({ navigation }) {
   if (!ready) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <Animated.View style={[authBaseStyles.logoBox, styles.loadingLogo, { opacity: pulseOpacity }]}>
-          <Text style={authBaseStyles.logoLetter}>C</Text>
+        <Animated.View style={[styles.loadingLogo, { opacity: pulseOpacity }]}>
+          <Image source={require("../assets/adaptive-icon.png")} style={styles.loadingLogoImg} resizeMode="contain" />
         </Animated.View>
         <Text style={styles.loadingBrand}>Cashflow <Text style={{ color: PRIMARY }}>Trader</Text></Text>
         <Text style={styles.loadingTagline}>Preparing your dashboard…</Text>
@@ -1177,6 +1178,9 @@ export default function OverviewScreen({ navigation }) {
         visible={studioOpen}
         onClose={() => setStudioOpen(false)}
       />
+
+      {/* WelcomeTour — shown once after onboarding (mirrors web DashboardLayout condition) */}
+      <WelcomeTour visible={!!user?.onboarded && !user?.tour_completed} />
     </Animated.View>
   );
 }
@@ -1187,7 +1191,8 @@ const styles = StyleSheet.create({
 
   // Loading
   loadingContainer: { flex: 1, backgroundColor: "#050505", justifyContent: "center", alignItems: "center" },
-  loadingLogo: { width: 56, height: 56, borderRadius: 14, marginBottom: 20 },
+  loadingLogo: { marginBottom: 20, shadowColor: "#39FF14", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.45, shadowRadius: 18, elevation: 8 },
+  loadingLogoImg: { width: 56, height: 56, borderRadius: 14 },
   loadingBrand: { color: "#fff", fontSize: 22, fontFamily: DISPLAY.bold, marginBottom: 10 },
   loadingTagline: { color: "#555", fontSize: 13, fontFamily: BODY.regular, letterSpacing: 0.5 },
 

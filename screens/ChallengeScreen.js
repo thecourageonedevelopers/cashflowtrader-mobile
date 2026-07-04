@@ -4,7 +4,7 @@ import React, {
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Animated, Modal, TextInput, Linking, RefreshControl,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -582,7 +582,7 @@ function StatCard({ icon, label, value, suffix = "", sub = "", accent = "green" 
 function DayModal({ lesson, itemProgress, onClose, onChanged }) {
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <TouchableOpacity
           style={styles.modalBackdrop}
           activeOpacity={1}

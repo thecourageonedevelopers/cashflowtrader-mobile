@@ -33,4 +33,7 @@ export const profileApi = {
     client.post("/profile/avatar-preset", { picture_url }),
 
   deleteAvatar: () => client.delete("/profile/avatar"),
+
+  // Mirrors web: POST /profile/tour-complete → returns updated user
+  tourComplete: () => client.post("/profile/tour-complete"),
 };

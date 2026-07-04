@@ -37,9 +37,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Status colors matching web: open=amber, answered=neon, resolved=dim
 const STATUS_COLOR = {
-  open:     { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.30)", text: "#fcd34d" },
-  answered: { bg: "rgba(57,255,20,0.15)",  border: "rgba(57,255,20,0.30)",  text: PRIMARY },
-  resolved: { bg: "rgba(255,255,255,0.10)", border: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.50)" },
+  open:        { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.30)", text: "#fcd34d" },
+  in_progress: { bg: "rgba(57,255,20,0.15)",  border: "rgba(57,255,20,0.30)",  text: PRIMARY },
+  resolved:    { bg: "rgba(255,255,255,0.10)", border: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.50)" },
+  closed:      { bg: "rgba(255,255,255,0.08)", border: "rgba(255,255,255,0.12)", text: "rgba(255,255,255,0.30)" },
 };
 
 function fmt(ts) {
@@ -68,12 +69,15 @@ export default function SupportScreen({ navigation }) {
   const [openThread, setOpenThread] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [replyBusy, setReplyBusy] = useState(false);
+  const [threadDetails, setThreadDetails] = useState({});
+  const [threadLoading, setThreadLoading] = useState({});
 
   // ── Load requests ──────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     try {
       const r = await supportApi.list();
-      setRequests(r.data?.requests || []);
+      const data = r.data;
+      setRequests(Array.isArray(data) ? data : (data?.requests || []));
     } catch { /* ignore — non-critical */ }
   }, []);
 
@@ -105,7 +109,11 @@ export default function SupportScreen({ navigation }) {
     if (!validate()) return;
     setBusy(true);
     try {
-      await supportApi.submit({ ...form, request_type: activeType });
+      await supportApi.submit({
+        subject: REQ_TYPES.find((t) => t.key === activeType)?.label || activeType,
+        description: form.reason,
+        category: activeType,
+      });
       setActiveType(null);
       setForm({ name: user?.name || "", email: user?.email || "", mobile: user?.mobile || "", reason: "" });
       setFormErrors({});
@@ -119,13 +127,14 @@ export default function SupportScreen({ navigation }) {
   };
 
   // ── Send reply ─────────────────────────────────────────────────────────────
-  const sendReply = async (rid) => {
+  const sendReply = async (ticketId) => {
     if (!replyText.trim()) return;
     setReplyBusy(true);
     try {
-      await supportApi.reply(rid, replyText.trim());
+      await supportApi.reply(ticketId, replyText.trim());
       setReplyText("");
-      await load();
+      const r = await supportApi.getTicket(ticketId);
+      setThreadDetails((prev) => ({ ...prev, [ticketId]: r.data }));
     } catch (e) {
       showAlert({ type: "error", title: "Reply Failed", message: extractApiError(e) });
     } finally {
@@ -133,12 +142,28 @@ export default function SupportScreen({ navigation }) {
     }
   };
 
+  // ── Expand thread — fetches detail on first open ────────────────────────
+  const expandThread = useCallback((ticketId) => {
+    setOpenThread((prev) => (prev === ticketId ? null : ticketId));
+  }, []);
+
+  useEffect(() => {
+    if (!openThread || threadDetails[openThread]) return;
+    let cancelled = false;
+    setThreadLoading((prev) => ({ ...prev, [openThread]: true }));
+    supportApi.getTicket(openThread)
+      .then((r) => { if (!cancelled) setThreadDetails((prev) => ({ ...prev, [openThread]: r.data })); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setThreadLoading((prev) => ({ ...prev, [openThread]: false })); });
+    return () => { cancelled = true; };
+  }, [openThread]); // threadDetails intentionally excluded — fetch once per ticketId
+
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <ScreenLayout screenName="SupportScreen" navigation={navigation}>
       <KeyboardAvoidingView
         style={s.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
         <ScrollView
           contentContainerStyle={[s.scrollContent, isDesktop && s.scrollContentDesktop]}
@@ -196,31 +221,37 @@ export default function SupportScreen({ navigation }) {
               </View>
             ) : (
               requests.map((r) => {
-                const expanded = openThread === r.request_id;
+                const tid = r.ticketId || r.ticket_id || r.request_id;
+                const expanded = openThread === tid;
                 const st = STATUS_COLOR[r.status] || STATUS_COLOR.open;
-                const replyCount = r.replies?.length || 0;
+                const detail = threadDetails[tid];
+                const replies = detail?.replies || [];
+                const replyCount = replies.length;
+                const isLoadingThread = !!threadLoading[tid];
 
                 return (
-                  <View key={r.request_id} style={s.requestCard}>
+                  <View key={tid} style={s.requestCard}>
 
                     {/* ── Request header row — tap to expand / collapse ── */}
                     <TouchableOpacity
                       style={s.requestHeaderRow}
-                      onPress={() => setOpenThread(expanded ? null : r.request_id)}
+                      onPress={() => expandThread(tid)}
                       activeOpacity={0.75}
                     >
                       <View style={s.requestHeaderLeft}>
                         <View style={s.requestTitleRow}>
                           <Text style={s.requestTypeLabel} numberOfLines={1}>
-                            {TYPE_LABEL[r.request_type] || r.request_type}
+                            {TYPE_LABEL[r.category || r.request_type] || r.subject || r.category}
                           </Text>
                           <View style={[s.statusBadge, { backgroundColor: st.bg, borderColor: st.border }]}>
                             <Text style={[s.statusBadgeText, { color: st.text }]}>{r.status}</Text>
                           </View>
                         </View>
-                        <Text style={s.requestReason} numberOfLines={1}>{r.reason}</Text>
+                        <Text style={s.requestReason} numberOfLines={1}>
+                          {r.subject || r.description || r.reason}
+                        </Text>
                         <Text style={s.requestMeta}>
-                          {fmt(r.created_at)} · {replyCount} repl{replyCount === 1 ? "y" : "ies"}
+                          {fmt(r.createdAt || r.created_at)} · {replyCount} repl{replyCount === 1 ? "y" : "ies"}
                         </Text>
                       </View>
                       <Text style={s.expandChevron}>{expanded ? "▲" : "▼"}</Text>
@@ -229,54 +260,61 @@ export default function SupportScreen({ navigation }) {
                     {/* ── Thread — visible only when expanded ── */}
                     {expanded && (
                       <View style={s.threadContainer}>
+                        {isLoadingThread ? (
+                          <ActivityIndicator size="small" color={PRIMARY} />
+                        ) : (
+                          <>
+                            {/* Initial message bubble */}
+                            <View style={[s.bubble, s.bubbleUser]}>
+                              <Text style={s.bubbleAuthorUser}>
+                                You · {fmt(r.createdAt || r.created_at)}
+                              </Text>
+                              <Text style={s.bubbleText}>
+                                {detail?.description || r.description || r.reason}
+                              </Text>
+                            </View>
 
-                        {/* Initial message bubble */}
-                        <View style={[s.bubble, s.bubbleUser]}>
-                          <Text style={s.bubbleAuthorUser}>
-                            {r.name || "You"} · {fmt(r.created_at)}
-                          </Text>
-                          <Text style={s.bubbleText}>{r.reason}</Text>
-                        </View>
+                            {/* Reply bubbles */}
+                            {replies.map((m, i) => (
+                              <View
+                                key={i}
+                                style={[s.bubble, m.from === "staff" ? s.bubbleStaff : s.bubbleUser]}
+                              >
+                                <Text style={m.from === "staff" ? s.bubbleAuthorStaff : s.bubbleAuthorUser}>
+                                  {m.from === "staff" ? "Support Team" : (m.author || "You")} · {fmt(m.createdAt || m.at)}
+                                </Text>
+                                <Text style={s.bubbleText}>{m.content || m.message}</Text>
+                              </View>
+                            ))}
 
-                        {/* Reply bubbles */}
-                        {(r.replies || []).map((m, i) => (
-                          <View
-                            key={i}
-                            style={[s.bubble, m.from === "staff" ? s.bubbleStaff : s.bubbleUser]}
-                          >
-                            <Text style={m.from === "staff" ? s.bubbleAuthorStaff : s.bubbleAuthorUser}>
-                              {m.from === "staff" ? "Support Team" : (m.author || "You")} · {fmt(m.at)}
-                            </Text>
-                            <Text style={s.bubbleText}>{m.message}</Text>
-                          </View>
-                        ))}
-
-                        {/* Reply box — hidden when resolved */}
-                        {r.status !== "resolved" && (
-                          <View style={s.replyRow}>
-                            <TextInput
-                              style={s.replyInput}
-                              value={openThread === r.request_id ? replyText : ""}
-                              onChangeText={setReplyText}
-                              placeholder="Type a reply..."
-                              placeholderTextColor="rgba(255,255,255,0.30)"
-                              multiline
-                              numberOfLines={2}
-                              textAlignVertical="top"
-                              selectionColor={PRIMARY}
-                            />
-                            <TouchableOpacity
-                              style={[s.sendBtn, (replyBusy || !replyText.trim()) && s.sendBtnDisabled]}
-                              onPress={() => sendReply(r.request_id)}
-                              disabled={replyBusy || !replyText.trim()}
-                              activeOpacity={0.8}
-                            >
-                              {replyBusy
-                                ? <ActivityIndicator size="small" color="#000" />
-                                : <Ionicons name="send" size={16} color="#000" />
-                              }
-                            </TouchableOpacity>
-                          </View>
+                            {/* Reply box — hidden when resolved or closed */}
+                            {(r.status !== "resolved" && r.status !== "closed") && (
+                              <View style={s.replyRow}>
+                                <TextInput
+                                  style={s.replyInput}
+                                  value={openThread === tid ? replyText : ""}
+                                  onChangeText={setReplyText}
+                                  placeholder="Type a reply..."
+                                  placeholderTextColor="rgba(255,255,255,0.30)"
+                                  multiline
+                                  numberOfLines={2}
+                                  textAlignVertical="top"
+                                  selectionColor={PRIMARY}
+                                />
+                                <TouchableOpacity
+                                  style={[s.sendBtn, (replyBusy || !replyText.trim()) && s.sendBtnDisabled]}
+                                  onPress={() => sendReply(tid)}
+                                  disabled={replyBusy || !replyText.trim()}
+                                  activeOpacity={0.8}
+                                >
+                                  {replyBusy
+                                    ? <ActivityIndicator size="small" color="#000" />
+                                    : <Ionicons name="send" size={16} color="#000" />
+                                  }
+                                </TouchableOpacity>
+                              </View>
+                            )}
+                          </>
                         )}
                       </View>
                     )}
@@ -304,7 +342,7 @@ export default function SupportScreen({ navigation }) {
         >
           <KeyboardAvoidingView
             style={s.modalKAV}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            behavior="padding"
           >
             <ScrollView
               showsVerticalScrollIndicator={false}

@@ -1,19 +1,19 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { PRIMARY, authBaseStyles } from "../auth/AuthStyles";
+import { PRIMARY } from "../auth/AuthStyles";
+import { DISPLAY } from "../../src/theme/typography";
 
 export default function AppHeader({ onMenuPress, showMenuButton = true }) {
   return (
     <View style={styles.header}>
       <View style={styles.logoRow}>
         <Image
-          source={require("../../assets/icon.png")}
+          source={require("../../assets/adaptive-icon.png")}
           style={styles.logo}
           resizeMode="contain"
         />
-
-        <Text style={authBaseStyles.brandText}>
+        <Text style={styles.brandText}>
           Cashflow <Text style={{ color: PRIMARY }}>Trader</Text>
         </Text>
       </View>
@@ -24,7 +24,7 @@ export default function AppHeader({ onMenuPress, showMenuButton = true }) {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           style={styles.menuBtn}
         >
-          <Ionicons name="menu" size={28} color="#fff" />
+          <Ionicons name="menu" size={20} color="#fff" />
         </TouchableOpacity>
       )}
     </View>
@@ -33,28 +33,35 @@ export default function AppHeader({ onMenuPress, showMenuButton = true }) {
 
 const styles = StyleSheet.create({
   header: {
-    height: 60,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    backgroundColor: "#090909",
+    paddingVertical: 16,
+    backgroundColor: "rgba(0,0,0,0.9)",
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "rgba(255,255,255,0.10)",
   },
 
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
   },
 
   logo: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     borderRadius: 8,
   },
 
+  brandText: {
+    color: "#fff",
+    fontFamily: DISPLAY.bold,
+    fontSize: 18,
+  },
+
   menuBtn: {
-    padding: 4,
+    padding: 8,
   },
 });

@@ -1,16 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { MONO } from "../../src/theme/typography";
 
-/**
- * "OR WITH EMAIL" divider shared by every auth screen.
- * style — override marginVertical (SignIn: 25, SignUp: 22).
- * textStyle — override fontSize (SignIn: 11, SignUp: 10).
- */
-export default function AuthDivider({ style, textStyle }) {
+export default function AuthDivider({ style }) {
   return (
     <View style={[styles.container, style]}>
       <View style={styles.line} />
-      <Text style={[styles.text, textStyle]}>OR WITH EMAIL</Text>
+      <Text style={styles.text}>Or with email</Text>
       <View style={styles.line} />
     </View>
   );
@@ -20,18 +16,19 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
+    marginVertical: 20,
   },
-
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: "#252525",
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
-
   text: {
-    color: "#666",
-    fontSize: 11,
-    letterSpacing: 2,
-    marginHorizontal: 10,
+    color: "rgba(255,255,255,0.4)",
+    fontFamily: MONO.regular,
+    fontSize: 10,
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    marginHorizontal: 12,
   },
 });

@@ -22,7 +22,6 @@ import {
   Modal,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
   Dimensions,
   StyleSheet,
   Image,
@@ -445,7 +444,7 @@ function AddWithdrawalModal({ visible, onClose, onSaved }) {
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={am.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior="padding"
           style={{ width: "100%" }}
         >
           <View style={am.sheet}>
