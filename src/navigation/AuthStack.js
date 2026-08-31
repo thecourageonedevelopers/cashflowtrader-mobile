@@ -2,6 +2,8 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import SignInScreen from "../../screens/auth/SignInScreen";
 import SignUpScreen from "../../screens/auth/SignUpScreen";
+import ForgotPasswordScreen from "../../screens/auth/ForgotPasswordScreen";
+import LegalScreen from "../../screens/LegalScreen";
 import { AUTH_ROUTES } from "../constants/routes";
 
 // Screens not yet built are imported lazily as placeholders — remove comments
@@ -19,6 +21,8 @@ export default function AuthStack() {
     >
       <Stack.Screen name={AUTH_ROUTES.SIGN_IN} component={SignInScreen} />
       <Stack.Screen name={AUTH_ROUTES.SIGN_UP} component={SignUpScreen} />
+      <Stack.Screen name={AUTH_ROUTES.FORGOT_PASSWORD} component={ForgotPasswordScreen} />
+      <Stack.Screen name={AUTH_ROUTES.LEGAL} component={LegalScreen} options={{ animation: "slide_from_right" }} />
 
       {/* Uncomment when screens are built: */}
       {/* <Stack.Screen name={AUTH_ROUTES.AUTH_CALLBACK} component={AuthCallbackScreen} /> */}

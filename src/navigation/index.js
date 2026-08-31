@@ -19,7 +19,11 @@ const NAV_THEME = {
 };
 
 export default function RootNavigator() {
-  const { isAuthenticated, isOnboarded, loading } = useAuth();
+  const { isAuthenticated, isOnboarded, loading, user } = useAuth();
+  // Traders must finish onboarding before dashboard access, but staff/admin bypass this exactly
+  // like web (ProtectedRoute.jsx:23 — `!user.is_admin && !user.is_staff && !impersonating`;
+  // mobile has no impersonation feature, so only the two role checks apply here).
+  const skipOnboarding = !!user?.is_admin || !!user?.is_staff;
 
   // Holds splash until async token check resolves — prevents auth-screen flash
   if (loading) {
@@ -34,7 +38,7 @@ export default function RootNavigator() {
     <NavigationContainer theme={NAV_THEME} linking={LINKING_CONFIG}>
       {!isAuthenticated
         ? <AuthStack />
-        : !isOnboarded
+        : (!isOnboarded && !skipOnboarding)
         ? <OnboardingStack />
         : <AppStack />}
     </NavigationContainer>

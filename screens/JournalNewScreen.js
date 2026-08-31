@@ -7,10 +7,13 @@ import {
   TextInput,
   StyleSheet,
   ActivityIndicator,
+  Platform,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useQuery } from "@tanstack/react-query";
 import { journalApi } from "../src/api/journal";
 import { uploadApi } from "../src/api/upload";
@@ -54,6 +57,60 @@ function FieldInput({ label, value, onChange, placeholder, keyboardType = "defau
         keyboardType={keyboardType}
         multiline={multiline}
       />
+    </View>
+  );
+}
+
+// Same native-date-picker pattern already used for the filter date range in JournalScreen.js
+// (Android: inline system dialog; iOS/web: modal overlay + Done button) — reused here instead of
+// the free-text field this replaced, since a malformed typed date silently broke the date-range
+// filter's string comparisons ((e.date||"") < dateFrom) used identically on both platforms.
+function FieldDateInput({ label, value, onChange }) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  const parsePickerDate = (dateStr) => {
+    if (!dateStr) return new Date();
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  return (
+    <View style={s.fieldWrap}>
+      <Text style={s.fieldLabel}>{label}</Text>
+      <TouchableOpacity style={s.fieldInput} onPress={() => setShowPicker(true)}>
+        <Text style={{ color: "#fff", fontFamily: BODY.regular, fontSize: 14 }}>{value || "—"}</Text>
+      </TouchableOpacity>
+
+      {showPicker && Platform.OS === "android" && (
+        <DateTimePicker
+          value={parsePickerDate(value)}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            setShowPicker(false);
+            if (event.type !== "dismissed" && date) onChange(date.toISOString().slice(0, 10));
+          }}
+        />
+      )}
+      {showPicker && Platform.OS !== "android" && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setShowPicker(false)}>
+          <View style={s.pickerOverlay}>
+            <View style={s.pickerBox}>
+              <DateTimePicker
+                value={parsePickerDate(value)}
+                mode="date"
+                display="inline"
+                onChange={(event, date) => { if (date) onChange(date.toISOString().slice(0, 10)); }}
+                themeVariant="dark"
+                accentColor={PRIMARY}
+              />
+              <TouchableOpacity style={s.pickerDoneBtn} onPress={() => setShowPicker(false)}>
+                <Text style={s.pickerDoneText}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -222,11 +279,10 @@ export default function JournalNewScreen({ navigation }) {
               onChange={(v) => set("market", v)}
               placeholder="NIFTY / BTCUSDT"
             />
-            <FieldInput
+            <FieldDateInput
               label="Date"
               value={form.date}
               onChange={(v) => set("date", v)}
-              placeholder="YYYY-MM-DD"
             />
             <FieldInput
               label="P&L"
@@ -501,6 +557,34 @@ const s = StyleSheet.create({
     color: "#fff",
     fontFamily: BODY.regular,
     fontSize: 14,
+    justifyContent: "center",
+    minHeight: 42,
+  },
+
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pickerBox: {
+    backgroundColor: "#111",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    overflow: "hidden",
+    width: 340,
+  },
+  pickerDoneBtn: {
+    backgroundColor: PRIMARY,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  pickerDoneText: {
+    color: "#000",
+    fontFamily: DISPLAY.bold,
+    fontSize: 14,
+    letterSpacing: 1,
   },
 
   // Direction / Result toggles

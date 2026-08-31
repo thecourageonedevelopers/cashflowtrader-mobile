@@ -1,5 +1,6 @@
 import axios from "axios";
 import { tokenService } from "../services/tokenService";
+import { decryptResponseData } from "../utils/responseCrypto";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -7,8 +8,13 @@ if (!API_URL) {
   console.warn("[API] EXPO_PUBLIC_API_URL is not set. Check your .env file.");
 }
 
+// Exported for the rare call site that needs a raw, non-axios request against the same base URL
+// (e.g. a file download via expo-file-system) — mirrors web's own API_BASE export from
+// src/lib/api.js, used the same way there.
+export const API_BASE = `${API_URL}/api`;
+
 const client = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_BASE,
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
@@ -30,11 +36,21 @@ client.interceptors.request.use(
 );
 
 // ── Response interceptor ───────────────────────────────────────────────────
+// Every JSON response leaving the gateway is encrypted (ResponseEncryptionFilter, backend) —
+// decrypt first, on both the success and error paths, before any other code (including the 401
+// handling right below, which will read fields off the decrypted error body once callers rely on
+// it) ever sees `.data`. Same order as web's axios interceptor in src/lib/api.js.
 // On 401: clear stored token so AuthContext re-evaluates on next render.
 // Actual navigation to login happens inside AuthContext, not here.
 client.interceptors.response.use(
-  (response) => response,
+  async (response) => {
+    response.data = await decryptResponseData(response.data);
+    return response;
+  },
   async (error) => {
+    if (error.response) {
+      error.response.data = await decryptResponseData(error.response.data);
+    }
     if (error.response?.status === 401) {
       await tokenService.remove();
       // onUnauthorized callback — set by AuthContext after mount

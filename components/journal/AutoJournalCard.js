@@ -12,9 +12,11 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { journalApi } from "../../src/api/journal";
 import ChartReviewModal from "./ChartReviewModal";
 import { useAlert } from "../../src/context/AlertContext";
@@ -23,6 +25,10 @@ import AmbientGlow from "../common/AmbientGlow";
 
 const PRIMARY = "#39FF14";
 const AMBER = "#FBBF24";
+
+// Mirrors web AutoJournal.jsx's ANALYZE_SETUP_ENABLED — "Locked for now, re-enable once the
+// chart-review flow is ready to ship." Web's flag currently reads false.
+const ANALYZE_SETUP_ENABLED = false;
 
 // ── Parse time string → Date (mirrors web parseT) ─────────────────────────
 function parseT(s) {
@@ -60,7 +66,7 @@ function fmtMins(m) {
   return h && mn ? `${h}h ${mn}m` : h ? `${h}h` : `${mn}m`;
 }
 
-const CLOSE_LABEL = { tp: "Hit TP", sl: "Hit SL", manual: "Manual close", unknown: "Unknown" };
+const CLOSE_LABEL = { tp: "Hit TP", sl: "Hit SL", trailing: "Trailing stop / auto square-off", manual: "Manual close", unknown: "Unknown" };
 
 const DIRECTION_OPTIONS = ["long", "short"];
 const RESULT_OPTIONS = ["win", "loss", "breakeven", ""];
@@ -116,6 +122,8 @@ const ip = StyleSheet.create({
 
 // ── TradeRow — single editable detected trade row ─────────────────────────
 function TradeRow({ row, index, onChange }) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const update = (key, val) => {
     const next = { ...row, [key]: val };
     if (key === "open_time" || key === "close_time") {
@@ -125,6 +133,17 @@ function TradeRow({ row, index, onChange }) {
   };
 
   const isLoss = row.result === "loss";
+  // Matches web AutoJournal.jsx:257-258 exactly — raw field names from the extraction API,
+  // joined as-is (no per-field pretty labels invented on either side).
+  const lowConfidence = Array.isArray(row.low_confidence_fields) ? row.low_confidence_fields : [];
+  const pnlUncertain = lowConfidence.includes("pnl");
+  const dateUncertain = lowConfidence.includes("open_time");
+
+  const parsePickerDate = (dateStr) => {
+    if (!dateStr) return new Date();
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
 
   return (
     <View style={[tr.card, row._selected ? tr.cardSelected : tr.cardUnselected]}>
@@ -151,10 +170,24 @@ function TradeRow({ row, index, onChange }) {
           <Text style={tr.badgeText}>{CLOSE_LABEL[row.close_type] || "Unknown"}</Text>
         </View>
 
+        {row.close_type_source === "verified" ? (
+          <View style={tr.verifiedTag}>
+            <Ionicons name="checkmark" size={10} color={PRIMARY} style={{ marginRight: 3 }} />
+            <Text style={tr.verifiedTagText}>Verified</Text>
+          </View>
+        ) : null}
+
         {row.high_loss ? (
           <View style={tr.lossTag}>
             <Ionicons name="warning-outline" size={10} color="#fde68a" style={{ marginRight: 3 }} />
             <Text style={tr.lossTagText}>Biggest loss</Text>
+          </View>
+        ) : null}
+
+        {lowConfidence.length > 0 ? (
+          <View style={tr.lowConfTag}>
+            <Ionicons name="warning-outline" size={10} color="#fef08a" style={{ marginRight: 3 }} />
+            <Text style={tr.lowConfTagText}>Verify: {lowConfidence.join(", ")}</Text>
           </View>
         ) : null}
       </View>
@@ -175,19 +208,18 @@ function TradeRow({ row, index, onChange }) {
             options={RESULT_OPTIONS}
             value={row.result}
             onChange={(v) => update("result", v)}
-            formatLabel={(v) => (v === "" ? "—" : v.charAt(0).toUpperCase() + v.slice(1))}
+            formatLabel={(v) => (v === "" ? "Unknown" : v.charAt(0).toUpperCase() + v.slice(1))}
           />
         </FieldLabel>
       </View>
 
       <View style={tr.grid2}>
-        <FieldLabel label="P&L">
+        <FieldLabel label={pnlUncertain ? "P&L ⚠" : "P&L"}>
           <TextInput
-            style={[tr.miniInput, isLoss && { color: "#f87171" }]}
+            style={[tr.miniInput, isLoss && { color: "#f87171" }, pnlUncertain && tr.miniInputUncertain]}
             value={row.pnl != null ? String(row.pnl) : ""}
             onChangeText={(v) => update("pnl", v)}
             keyboardType="numeric"
-            placeholder="0"
             placeholderTextColor="rgba(255,255,255,0.25)"
           />
         </FieldLabel>
@@ -204,8 +236,17 @@ function TradeRow({ row, index, onChange }) {
         </FieldLabel>
       </View>
 
-      {/* ── Grid row 2: Open time, Close time, Holding ── */}
-      <View style={tr.grid3}>
+      {/* ── Grid row 2: Date, Open time, Close time, Holding ── */}
+      <View style={tr.grid4}>
+        <FieldLabel label={dateUncertain ? "Date ⚠" : "Date"}>
+          <TouchableOpacity
+            style={[tr.miniInput, tr.dateInput, dateUncertain && tr.miniInputUncertain]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={tr.dateInputText} numberOfLines={1}>{row.date || "—"}</Text>
+          </TouchableOpacity>
+        </FieldLabel>
+
         <FieldLabel label="Open time">
           <TextInput
             style={tr.miniInput}
@@ -233,6 +274,42 @@ function TradeRow({ row, index, onChange }) {
         </FieldLabel>
       </View>
 
+      {/* ── Date picker — same platform-split pattern as JournalScreen.js's filter pickers ── */}
+      {showDatePicker && Platform.OS === "android" && (
+        <DateTimePicker
+          value={parsePickerDate(row.date)}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            setShowDatePicker(false);
+            if (event.type !== "dismissed" && date) {
+              update("date", date.toISOString().slice(0, 10));
+            }
+          }}
+        />
+      )}
+      {showDatePicker && Platform.OS !== "android" && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setShowDatePicker(false)}>
+          <View style={tr.pickerOverlay}>
+            <View style={tr.pickerBox}>
+              <DateTimePicker
+                value={parsePickerDate(row.date)}
+                mode="date"
+                display="inline"
+                onChange={(event, date) => {
+                  if (date) update("date", date.toISOString().slice(0, 10));
+                }}
+                themeVariant="dark"
+                accentColor={PRIMARY}
+              />
+              <TouchableOpacity style={tr.pickerDoneBtn} onPress={() => setShowDatePicker(false)}>
+                <Text style={tr.pickerDoneText}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* ── Amber note ── */}
       {row.note ? (
         <View style={tr.noteWrap}>
@@ -247,7 +324,7 @@ function TradeRow({ row, index, onChange }) {
           style={tr.reasonInput}
           value={row.reason || ""}
           onChangeText={(v) => update("reason", v)}
-          placeholder="Optional: why did you close this trade?"
+          placeholder="Optional: why did you close this trade? (the most valuable note you can add)"
           placeholderTextColor="rgba(255,255,255,0.3)"
           multiline
           numberOfLines={2}
@@ -311,9 +388,32 @@ const tr = StyleSheet.create({
     paddingVertical: 4,
   },
   lossTagText: { color: "#fde68a", fontFamily: MONO.regular, fontSize: 10, textTransform: "uppercase" },
+  verifiedTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: PRIMARY + "1A",
+    borderWidth: 1,
+    borderColor: PRIMARY + "66",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  verifiedTagText: { color: PRIMARY, fontFamily: MONO.regular, fontSize: 10, textTransform: "uppercase" },
+  lowConfTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#facc15" + "1F",
+    borderWidth: 1,
+    borderColor: "#facc15" + "66",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  lowConfTagText: { color: "#fef08a", fontFamily: MONO.regular, fontSize: 10, textTransform: "uppercase" },
 
   grid2: { flexDirection: "row", gap: 8 },
   grid3: { flexDirection: "row", gap: 6 },
+  grid4: { flexDirection: "row", gap: 6 },
 
   miniInput: {
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -325,6 +425,42 @@ const tr = StyleSheet.create({
     color: "#fff",
     fontFamily: BODY.regular,
     fontSize: 13,
+  },
+  miniInputUncertain: {
+    borderColor: "#facc15" + "99",
+  },
+  dateInput: {
+    justifyContent: "center",
+  },
+  dateInputText: {
+    color: "#fff",
+    fontFamily: BODY.regular,
+    fontSize: 13,
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pickerBox: {
+    backgroundColor: "#111",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    overflow: "hidden",
+    width: 340,
+  },
+  pickerDoneBtn: {
+    backgroundColor: PRIMARY,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  pickerDoneText: {
+    color: "#000",
+    fontFamily: DISPLAY.bold,
+    fontSize: 14,
+    letterSpacing: 1,
   },
 
   slTpWrap: { flexDirection: "row", gap: 8, paddingVertical: 6 },
@@ -392,7 +528,7 @@ export default function AutoJournalCard({ onImported, onNavigateToNew }) {
       setResult(data);
       setRows((data.trades || []).map((t) => ({ ...t, _selected: true })));
       if ((data.trades || []).length === 0) {
-        showAlert({ type: "info", title: "No trades detected", message: "No executed trades found. You can log manually." });
+        showAlert({ type: "info", title: "No trades detected", message: "No executed trades detected. You can still log manually." });
       }
     } catch (err) {
       showAlert({ type: "error", title: "Error", message: err?.response?.data?.detail || "Could not analyze the screenshot." });
@@ -500,13 +636,15 @@ export default function AutoJournalCard({ onImported, onNavigateToNew }) {
             </TouchableOpacity>
 
             {/* Analyze Setup — ghost-green */}
-            <TouchableOpacity
-              style={ac.analyzeBtn}
-              onPress={() => setReviewOpen(true)}
-            >
-              <Ionicons name="sparkles-outline" size={15} color={PRIMARY} style={{ marginRight: 6 }} />
-              <Text style={ac.analyzeBtnText}>Analyze Setup</Text>
-            </TouchableOpacity>
+            {ANALYZE_SETUP_ENABLED && (
+              <TouchableOpacity
+                style={ac.analyzeBtn}
+                onPress={() => setReviewOpen(true)}
+              >
+                <Ionicons name="sparkles-outline" size={15} color={PRIMARY} style={{ marginRight: 6 }} />
+                <Text style={ac.analyzeBtnText}>Analyze Setup</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -570,10 +708,10 @@ export default function AutoJournalCard({ onImported, onNavigateToNew }) {
                   disabled={importing || selectedCount === 0}
                 >
                   <Ionicons name={importing ? "hourglass-outline" : "checkmark"} size={14} color="#000" style={{ marginRight: 6 }} />
+                  {/* Text stays static while importing — only the icon above swaps to a
+                      spinner-equivalent, matching web's AutoJournal.jsx:407-415 exactly. */}
                   <Text style={cm.importBtnText}>
-                    {importing
-                      ? "Importing…"
-                      : `Import${selectedCount > 0 ? ` ${selectedCount}` : ""} to Journal`}
+                    {`Import${selectedCount > 0 ? ` ${selectedCount}` : ""} to Journal`}
                   </Text>
                 </TouchableOpacity>
               </View>

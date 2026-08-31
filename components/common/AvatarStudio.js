@@ -7,7 +7,7 @@
  *
  * Two tabs, matching web exactly:
  *   • Upload & crop — picker → native crop → FormData → POST /profile/avatar
- *   • Choose an avatar — 6 preset CDN images → POST /profile/avatar-preset
+ *   • Choose an avatar — 6 self-hosted preset images → POST /profile/avatar-preset
  *
  * On success: setUser(data) immediately updates AuthContext (same as web).
  */
@@ -37,14 +37,19 @@ const SURFACE = "#0a0a0a";
 const BORDER_DIM = "rgba(255,255,255,0.08)";
 const BORDER_NEON = "rgba(57,255,20,0.30)";
 
-// ─── Preset avatars — exact same CDN URLs as web AvatarStudio.jsx ─────────────
+// ─── Preset avatars — self-hosted, matching web's migration off the old third-party CDN
+// (web AvatarStudio.jsx's PRESET_AVATARS: "previously loaded from a third-party CDN, which meant
+// the avatar picker silently broke if that host went away"). Web serves these as relative paths
+// from its own origin (/avatars/*.png, src/public/avatars/); mobile has no such origin of its own,
+// so these point at the same files on the deployed production frontend, matching the pattern
+// already used by LegalScreen.js for other web-hosted static assets.
 const PRESET_AVATARS = [
-  { key: "bull",    url: "https://static.prod-images.emergentagent.com/jobs/ea6ae3d3-45b8-476e-b912-6d91c7ef9926/images/d53670de6d794224f103a8535cb76f710c5e0cc169dd244b3eda52a6733a0337.png" },
-  { key: "bear",    url: "https://static.prod-images.emergentagent.com/jobs/ea6ae3d3-45b8-476e-b912-6d91c7ef9926/images/c17efb3ad2e554cdc0d73183b794fb2af1294c141f281d12f3864cd0e2d288fe.png" },
-  { key: "fox",     url: "https://static.prod-images.emergentagent.com/jobs/ea6ae3d3-45b8-476e-b912-6d91c7ef9926/images/9b31d4641df607ee42fccb39a6ba2dd9a72a2b82a00acad02b58cfbabd98b675.png" },
-  { key: "owl",     url: "https://static.prod-images.emergentagent.com/jobs/ea6ae3d3-45b8-476e-b912-6d91c7ef9926/images/1dc794b7b22bf9247949d364957716f733cc0c75b6230bf0e4f7008003fb7f2f.png" },
-  { key: "candles", url: "https://static.prod-images.emergentagent.com/jobs/ea6ae3d3-45b8-476e-b912-6d91c7ef9926/images/4b4e99a42d3242314eae5e02be00217b2cb28e4c0af863bf455369c10727cc95.png" },
-  { key: "rocket",  url: "https://static.prod-images.emergentagent.com/jobs/ea6ae3d3-45b8-476e-b912-6d91c7ef9926/images/2318853008f0ac08563e72258b66dc880b942b7b2143f9c6cdfcbab77032b4fb.png" },
+  { key: "bull",    url: "https://cashflowtrader.in/avatars/bull.png" },
+  { key: "bear",    url: "https://cashflowtrader.in/avatars/bear.png" },
+  { key: "fox",     url: "https://cashflowtrader.in/avatars/fox.png" },
+  { key: "owl",     url: "https://cashflowtrader.in/avatars/owl.png" },
+  { key: "candles", url: "https://cashflowtrader.in/avatars/candles.png" },
+  { key: "rocket",  url: "https://cashflowtrader.in/avatars/rocket.png" },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────

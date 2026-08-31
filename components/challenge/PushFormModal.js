@@ -139,7 +139,9 @@ export default function PushFormModal() {
 
 // Renders the answer input based on question type.
 // Matches web QuestionInput: text, rating (1-5 stars), select (radio), multiselect (checkboxes)
-function QuestionInput({ q, value, onChange }) {
+// Exported so ChallengeScreen.js's FormItem (challenge day "form" item type) can reuse the exact
+// same question-rendering logic rather than duplicating it.
+export function QuestionInput({ q, value, onChange }) {
   const type = q.type || (q.options?.length ? "select" : "text");
 
   if (type === "select" && q.options?.length) {

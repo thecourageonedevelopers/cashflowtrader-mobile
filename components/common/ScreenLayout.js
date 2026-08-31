@@ -9,9 +9,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { useQuery } from "@tanstack/react-query";
 import AppHeader from "./AppHeader";
 import AppDrawer from "./AppDrawer";
+import ChallengeMaintenanceBanner from "../challenge/ChallengeMaintenanceBanner";
 import { useNavLoading } from "../../src/context/NavLoadingContext";
+import { challengeApi } from "../../src/api/challenge";
 
 const DRAWER_WIDTH = 300;
 
@@ -35,6 +38,21 @@ export default function ScreenLayout({ children, screenName, navigation }) {
   // Hide the navigation loading overlay whenever this screen gains focus.
   // Fires on initial mount AND on every re-focus (e.g. navigating back).
   useFocusEffect(useCallback(() => { hide(); }, [hide]));
+
+  // Mirrors web DashboardLayout.jsx's single challenge.listPrograms() call — feeds both the
+  // top-of-app maintenance banner and the drawer's "other active programs" links, so a new program
+  // is discoverable in the trader nav instead of only reachable by a direct link. react-query's
+  // cache means this only actually hits the network once across every screen mount, not per screen.
+  const { data: programsList } = useQuery({
+    queryKey: ["challengePrograms"],
+    queryFn: () => challengeApi.listPrograms().then((r) => r.data || []),
+    staleTime: 60000,
+  });
+  const extraPrograms = (programsList || []).filter((p) => p.program_id !== "21-day-challenge");
+  const legacyChallenge = (programsList || []).find((p) => p.program_id === "21-day-challenge");
+  const challengeMaintenance = legacyChallenge?.maintenance_enabled
+    ? { reason: legacyChallenge.maintenance_reason }
+    : null;
 
   // All hooks declared unconditionally (React rules of hooks).
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -85,17 +103,20 @@ export default function ScreenLayout({ children, screenName, navigation }) {
     });
   }, [drawerTranslateX, backdropOpacity]);
 
-  const handleNavigate = useCallback((routeName) => {
+  const handleNavigate = useCallback((routeName, params) => {
     // Desktop: drawer is permanent, never closes — just navigate.
     if (isDesktop) {
-      navigation.navigate(routeName);
+      navigation.navigate(routeName, params);
       return;
     }
 
     // Guard: ignore taps that arrive while a navigation is already in flight.
     if (isNavigating.current) return;
 
-    if (routeName === screenName) {
+    // A program link (dynamic, params-carrying) targeting the same screen name — e.g. tapping a
+    // different active program while already viewing ChallengeScreen — must still navigate through
+    // so the new programId param actually takes effect, unlike a plain re-tap of the current item.
+    if (routeName === screenName && !params) {
       closeDrawer();
       return;
     }
@@ -131,7 +152,7 @@ export default function ScreenLayout({ children, screenName, navigation }) {
       }),
     ]).start(() => {
       setDrawerOpen(false);
-      navigation.navigate(routeName);
+      navigation.navigate(routeName, params);
       isNavigating.current = false;
     });
   }, [isDesktop, navigation, screenName, drawerTranslateX, backdropOpacity, closeDrawer, show]);
@@ -146,16 +167,20 @@ export default function ScreenLayout({ children, screenName, navigation }) {
   if (isDesktop) {
     return (
       <View style={styles.webRoot}>
-        <View style={styles.webSidebar}>
-          <AppDrawer
-            currentScreen={screenName}
-            onNavigate={handleNavigate}
-            permanent
-          />
-        </View>
+        {challengeMaintenance && <ChallengeMaintenanceBanner reason={challengeMaintenance.reason} />}
+        <View style={styles.webRow}>
+          <View style={styles.webSidebar}>
+            <AppDrawer
+              currentScreen={screenName}
+              onNavigate={handleNavigate}
+              extraPrograms={extraPrograms}
+              permanent
+            />
+          </View>
 
-        <View style={styles.webMain}>
-          <View style={styles.content}>{children}</View>
+          <View style={styles.webMain}>
+            <View style={styles.content}>{children}</View>
+          </View>
         </View>
       </View>
     );
@@ -168,6 +193,7 @@ export default function ScreenLayout({ children, screenName, navigation }) {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea}>
+        {challengeMaintenance && <ChallengeMaintenanceBanner reason={challengeMaintenance.reason} />}
         <AppHeader onMenuPress={openDrawer} />
         <View style={styles.content}>{children}</View>
       </SafeAreaView>
@@ -232,8 +258,13 @@ const styles = StyleSheet.create({
   // ── Desktop web ───────────────────────────────────────────────────────────
   webRoot: {
     flex: 1,
-    flexDirection: "row",
+    flexDirection: "column",
     backgroundColor: "#050505",
+  },
+
+  webRow: {
+    flex: 1,
+    flexDirection: "row",
   },
 
   webSidebar: {

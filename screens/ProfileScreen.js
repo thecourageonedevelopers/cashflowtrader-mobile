@@ -29,6 +29,7 @@ import { currencySymbol } from "../src/utils/format";
 import { extractApiError } from "../src/utils/apiError";
 import client from "../src/api/client";
 import { useAlert } from "../src/context/AlertContext";
+import { APP_ROUTES } from "../src/constants/routes";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ function StatCard({ label, value, hint }) {
 export default function ProfileScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 768;
-  const { user, refresh } = useAuth();
+  const { user, refresh, logout } = useAuth();
   const { showAlert } = useAlert();
 
   // ── Form state ─────────────────────────────────────────────────────────────
@@ -326,7 +327,13 @@ export default function ProfileScreen({ navigation }) {
     try {
       await profileApi.changePassword(pw.current_password, pw.new_password);
       setPw({ current_password: "", new_password: "" });
-      showAlert({ type: "success", title: "Updated", message: "Password changed successfully." });
+      // A password change invalidates every active session for this account, including this one
+      // (confirmed server-side: IdentityService#syncCore -> bumpSessionVersionIfNonAdmin) — there's
+      // no token handed back to keep this device signed in, so force re-auth immediately rather
+      // than let the next API call fail later with a confusing error. Matches web's Profile.jsx
+      // exactly: same copy, same forced sign-out.
+      await logout();
+      showAlert({ type: "success", title: "Updated", message: "Password changed. Please sign in again." });
     } catch (e) {
       showAlert({ type: "error", title: "Error", message: extractApiError(e) });
     } finally {
@@ -480,10 +487,15 @@ export default function ProfileScreen({ navigation }) {
             <ProtectedField
               label="EMAIL"
               value={user?.email}
-              verified={user?.email_verified !== false}
-              onChangePress={() =>
-                showAlert({ type: "info", title: "Change Email", message: "Email changes are managed via the web app for security verification." })
-              }
+              // Matches web Profile.jsx:314 exactly (registration_email_verified, not
+              // email_verified — that's an unrelated admin-only field name). Note: as of this
+              // fix, GET /auth/me doesn't actually serialize either field (verified against
+              // backend source), so both web and mobile currently show "Verified" unconditionally
+              // regardless of real status — a pre-existing backend gap, not something this
+              // rename alone can close. Renaming here so mobile tracks web's exact field and both
+              // platforms start reflecting real status together the moment the backend is fixed.
+              verified={user?.registration_email_verified !== false}
+              onChangePress={() => navigation.navigate(APP_ROUTES.CHANGE_CONTACT, { mode: "email" })}
             />
 
             <ProtectedField
@@ -491,9 +503,7 @@ export default function ProfileScreen({ navigation }) {
               value={form.mobile}
               verified={!!user?.mobile_verified || !!user?.mobile_locked}
               changeLabel={form.mobile ? "Change" : "Add"}
-              onChangePress={() =>
-                showAlert({ type: "info", title: "Change Mobile", message: "Mobile number changes require OTP verification. Use the web app to update." })
-              }
+              onChangePress={() => navigation.navigate(APP_ROUTES.CHANGE_CONTACT, { mode: "mobile" })}
             />
 
             <ProtectedField
@@ -553,7 +563,7 @@ export default function ProfileScreen({ navigation }) {
                   <Text style={styles.securityRowLabel}>Email</Text>
                   <Text style={styles.securityRowValue} numberOfLines={1}>{user?.email || "Not set"}</Text>
                 </View>
-                {user?.email_verified !== false && (
+                {user?.registration_email_verified !== false && (
                   <View style={styles.verifiedBadge}>
                     <Ionicons name="shield-checkmark-outline" size={11} color={PRIMARY} />
                     <Text style={styles.verifiedText}>Verified</Text>
@@ -602,9 +612,7 @@ export default function ProfileScreen({ navigation }) {
               ) : (
                 <TouchableOpacity
                   style={styles.neonSmallBtn}
-                  onPress={() =>
-                    showAlert({ type: "info", title: "Create Password", message: "Use the Change Password section below to set a new password." })
-                  }
+                  onPress={() => navigation.navigate(APP_ROUTES.CREATE_PASSWORD)}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.neonSmallBtnText}>Create Password</Text>
@@ -835,7 +843,7 @@ export default function ProfileScreen({ navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const CARD_BG      = "rgba(10,10,10,0.9)";
+const CARD_BG      = "rgba(10,10,10,0.8)";
 const CARD_BORDER  = "rgba(255,255,255,0.10)";
 const INPUT_BG     = "rgba(255,255,255,0.03)";
 const INPUT_BORDER = "rgba(255,255,255,0.10)";

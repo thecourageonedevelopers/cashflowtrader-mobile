@@ -18,11 +18,13 @@ import { PRIMARY } from "../components/auth/AuthStyles";
 import { useAuth } from "../src/hooks/useAuth";
 import { progressApi } from "../src/api/progress";
 import { challengeApi } from "../src/api/challenge";
+import { journalApi } from "../src/api/journal";
 import { formatDate } from "../src/utils/format";
 
+// Matches web Progress.jsx's exact thresholds (30/70, not 50/75).
 function scoreFooterText(score) {
-  if (score >= 75) return "Elite mode. You're building real trader equity — habits that pay you back for decades.";
-  if (score >= 50) return "Consistency is forming. Keep journaling, keep showing up. The score follows the routine.";
+  if (score >= 70) return "Elite mode. You're building real trader equity — habits that pay you back for decades.";
+  if (score >= 30) return "Consistency is forming. Keep journaling, keep showing up. The score follows the routine.";
   return "Early days. Show up tomorrow. Discipline scores compound — small actions, applied daily.";
 }
 
@@ -48,11 +50,18 @@ export default function ProgressScreen({ navigation }) {
     queryFn: () => challengeApi.lessons().then((r) => r.data),
   });
 
+  // Sole purpose: the timeline's real "First Journal Entry" date, matching web Progress.jsx's own
+  // independent GET /journal fetch for the exact same reason.
+  const { data: journals, refetch: refetchJournals } = useQuery({
+    queryKey: ["journals"],
+    queryFn: () => journalApi.list().then((r) => r.data),
+  });
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchProgress(), refetchChallenge()]);
+    await Promise.all([refetchProgress(), refetchChallenge(), refetchJournals()]);
     setRefreshing(false);
-  }, [refetchProgress, refetchChallenge]);
+  }, [refetchProgress, refetchChallenge, refetchJournals]);
 
   // ─── Derived values ──────────────────────────────────────────────────────────
   const currentStreak = progress?.current_streak ?? 0;
@@ -90,54 +99,59 @@ export default function ProgressScreen({ navigation }) {
     },
   ], [journalCount, challengePct, daysActive, currentStreak]);
 
+  // Matches web Progress.jsx's timeline exactly: `date` is a real date string (shown formatted
+  // only when `completed && date`), `pending` is a per-item override of the default "Locked"
+  // label shown when not completed (only "First Live Session" has one — "Pending", since it's
+  // simply not tracked yet rather than gated behind an achievement).
   const timelineItems = useMemo(() => {
-    const joinedDate = user?.created_at
-      ? formatDate(user.created_at, "MMM DD, YYYY").toUpperCase()
-      : "";
-    const hasJournal = journalCount > 0;
+    const sortedJournals = journalCount
+      ? [...(journals || [])].sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""))
+      : [];
+    const firstJournalDate = sortedJournals[0]?.created_at || "";
     const challengeAny = completedCount > 0;
     const streak7 = currentStreak >= 7;
-    const challengeAll = completedCount >= 21;
+    const challengeAll = completedCount === 21;
 
     return [
       {
         title: "Joined the platform",
         description: "The decision to become a better trader.",
-        date: joinedDate,
+        date: user?.created_at || "",
         completed: true,
       },
       {
         title: "First Journal Entry",
         description: "The day documentation became a habit.",
-        date: hasJournal ? "DONE" : "PENDING",
-        completed: hasJournal,
+        date: firstJournalDate,
+        completed: journalCount > 0,
       },
       {
         title: "First Live Session",
         description: "Joined the process. Stopped trading alone.",
-        date: "PENDING",
-        completed: false,
+        date: "",
+        pending: "Pending",
+        completed: false, // Not tracked yet
       },
       {
         title: "First Challenge Day Completed",
         description: "Discipline started compounding.",
-        date: challengeAny ? "DONE" : "PENDING",
+        date: "",
         completed: challengeAny,
       },
       {
         title: "7-Day Streak",
         description: "Routine officially installed.",
-        date: streak7 ? "DONE" : "LOCKED",
+        date: "",
         completed: streak7,
       },
       {
         title: "21-Day Completion",
         description: "The trader you were meant to become.",
-        date: challengeAll ? "DONE" : "LOCKED",
+        date: "",
         completed: challengeAll,
       },
     ];
-  }, [user, journalCount, completedCount, currentStreak]);
+  }, [user, journals, journalCount, completedCount, currentStreak]);
 
   // ─── Loading state ───────────────────────────────────────────────────────────
   if (progressLoading && !progress) {
@@ -224,6 +238,9 @@ export default function ProgressScreen({ navigation }) {
               {journalCount}
               <Text style={styles.statUnit}> logged</Text>
             </Text>
+            {journalCount === 0 && (
+              <Text style={styles.statFooter}>FIRST TRADE WAITING</Text>
+            )}
           </View>
 
           <View style={styles.statCard}>
@@ -235,6 +252,9 @@ export default function ProgressScreen({ navigation }) {
               {Math.round(challengePct)}%
               <Text style={styles.statUnit}> complete</Text>
             </Text>
+            {challengePct === 0 && (
+              <Text style={styles.statFooter}>PATH BEGINS TODAY</Text>
+            )}
           </View>
 
           <View style={styles.statCard}>
@@ -246,6 +266,9 @@ export default function ProgressScreen({ navigation }) {
               {daysActive}
               <Text style={styles.statUnit}> days</Text>
             </Text>
+            {daysActive === 0 && (
+              <Text style={styles.statFooter}>READY TO BEGIN</Text>
+            )}
           </View>
         </View>
 
@@ -256,15 +279,15 @@ export default function ProgressScreen({ navigation }) {
               <Ionicons name="shield-checkmark-outline" size={12} color={PRIMARY} />
               <Text style={styles.scoreBadgeText}>DISCIPLINE SCORE</Text>
             </View>
-            <Text style={styles.scoreRange}>0 - 100</Text>
+            <Text style={styles.scoreRange}>0 – 100</Text>
           </View>
 
           <View style={styles.scoreHero}>
             <Text style={styles.scoreValue}>{score}</Text>
             <Text style={styles.scoreDescription}>
-              Composite measure of{"\n"}
-              consistency, journaling, and{"\n"}
-              challenge execution.
+              {score > 0
+                ? "Composite measure of consistency, journaling, and challenge execution."
+                : "Potential unlocked. Your first action will move this."}
             </Text>
           </View>
 
@@ -313,7 +336,14 @@ export default function ProgressScreen({ navigation }) {
           </Text>
 
           <View style={styles.timelineWrapper}>
-            {timelineItems.map((item, index) => (
+            {timelineItems.map((item, index) => {
+              // Matches web exactly: a completed item with a real date shows that date; an
+              // incomplete item shows its own `pending` override or the default "Locked" — a
+              // completed item with no tracked date (most of these) shows nothing at all.
+              const dateDisplay = item.completed
+                ? (item.date ? formatDate(item.date, "MMM D, YYYY") : null)
+                : (item.pending || "Locked");
+              return (
               <View key={index} style={styles.timelineRow}>
                 {/* LEFT SIDE */}
                 <View style={styles.timelineLeft}>
@@ -353,20 +383,23 @@ export default function ProgressScreen({ navigation }) {
                   </Text>
                 </View>
 
-                {/* RIGHT */}
-                <View style={styles.timelineDateBox}>
-                  <Text
-                    style={[
-                      styles.timelineDate,
-                      item.date === "LOCKED" && styles.timelineLocked,
-                      item.date === "PENDING" && styles.timelinePending,
-                    ]}
-                  >
-                    {item.date}
-                  </Text>
-                </View>
+                {/* RIGHT — nothing rendered when a completed item has no tracked date */}
+                {dateDisplay && (
+                  <View style={styles.timelineDateBox}>
+                    <Text
+                      style={[
+                        styles.timelineDate,
+                        !item.completed && dateDisplay === "Locked" && styles.timelineLocked,
+                        !item.completed && dateDisplay !== "Locked" && styles.timelinePending,
+                      ]}
+                    >
+                      {dateDisplay.toUpperCase()}
+                    </Text>
+                  </View>
+                )}
               </View>
-            ))}
+              );
+            })}
           </View>
         </View>
       </ScrollView>

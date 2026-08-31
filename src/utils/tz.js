@@ -44,6 +44,15 @@ export function tzOffsetLabel(tz) {
   return `GMT ${sign}${hh}:${mm}`;
 }
 
+// "17:00" / "5:00 PM" -> "5:00 PM" — matches web's formatTimeSlot exactly.
+export function formatTimeSlot(slot) {
+  const p = parseSlot(slot);
+  if (!p) return slot || "";
+  const h12 = p.h % 12 === 0 ? 12 : p.h % 12;
+  const ap = p.h < 12 ? "AM" : "PM";
+  return `${h12}:${String(p.min).padStart(2, "0")} ${ap}`;
+}
+
 // Parse "5:00 PM" / "17:00" into {h, min}.
 function parseSlot(slot) {
   const m = (slot || "").trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);

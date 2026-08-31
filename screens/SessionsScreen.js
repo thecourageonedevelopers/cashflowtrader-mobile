@@ -42,14 +42,6 @@ const IMPORTANCE_COLORS = {
 
 // ─── Helpers (ported 1-to-1 from web LiveSessions.jsx) ───────────────────────
 
-// Deterministic pseudo-random attendee count — stable across renders
-function attendeeCountFor(id) {
-  if (!id) return 0;
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return 42 + (h % 180);
-}
-
 // 3-level importance based on title keywords
 function importanceFor(title = "") {
   const t = title.toLowerCase();
@@ -174,8 +166,10 @@ export default function SessionsScreen({ navigation }) {
   }, [sessions, now, tz]);
 
   const nextCountdown = nextSession ? formatCountdown(nextSession._start) : null;
-  const nextAttendees = nextSession ? attendeeCountFor(nextSession.session_id) : 0;
+  // Real API count — web reads `attendee_count ?? 0` directly, never fabricates one.
+  const nextAttendees = nextSession ? (nextSession.attendee_count ?? 0) : 0;
   const nextUrl       = nextSession ? meetingUrlOf(nextSession) : null;
+  const nextIsLive    = nextSession ? (nextSession.status || "Scheduled") === "Live" : false;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -265,8 +259,9 @@ export default function SessionsScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Join button OR "Link Coming Soon" disabled — matches web exactly */}
-            {nextUrl ? (
+            {/* Join button OR disabled span — web only enables Join when status === "Live",
+                not merely because a URL exists (LiveSessions.jsx:127-138). */}
+            {nextUrl && nextIsLive ? (
               <TouchableOpacity
                 style={styles.neonBtn}
                 activeOpacity={0.85}
@@ -280,7 +275,9 @@ export default function SessionsScreen({ navigation }) {
               </TouchableOpacity>
             ) : (
               <View style={styles.disabledBtn}>
-                <Text style={styles.disabledBtnText}>Link Coming Soon</Text>
+                <Text style={styles.disabledBtnText}>
+                  {nextUrl ? "Not Started Yet" : "Link Coming Soon"}
+                </Text>
               </View>
             )}
           </View>
@@ -330,9 +327,12 @@ export default function SessionsScreen({ navigation }) {
               const start     = zonedSessionStart(s.date, s.time_slot, tz);
               const countdown = start ? formatCountdown(start) : null;
               const inText    = inColumnText(countdown);
-              const attendees = attendeeCountFor(s.session_id);
+              // Real API count — web reads `attendee_count ?? 0` directly, never fabricates one.
+              const attendees = s.attendee_count ?? 0;
               const url       = meetingUrlOf(s);
-              const joinable  = !!url && !isEnded;
+              // Web only enables Join when status === "Live" (LiveSessions.jsx:241,258) — a
+              // Scheduled session with a URL is "Not Started Yet", not joinable.
+              const joinable  = !!url && isLive;
 
               // "Starts" column value — includes tz label when user has timezone set
               const startsValue = tzLbl
@@ -441,7 +441,7 @@ export default function SessionsScreen({ navigation }) {
                   ) : (
                     <View style={styles.disabledBtn}>
                       <Text style={styles.disabledBtnText}>
-                        {isEnded ? "Session Ended" : "Link Coming Soon"}
+                        {isEnded ? "Session Ended" : !url ? "Link Coming Soon" : "Not Started Yet"}
                       </Text>
                     </View>
                   )}

@@ -27,31 +27,67 @@ export function AuthProvider({ children }) {
   const logoutRef = useRef(null);
 
   // ── Check existing session ──────────────────────────────────────────────
-  const checkAuth = useCallback(async () => {
+  // Mirrors web's checkAuth thunk (authSlice.js): a single attempt, classified as
+  // "definitive" only for an actual 401 (invalid/expired/revoked token — there's genuinely no
+  // session to restore) versus "non-definitive" for everything else (network error, timeout,
+  // 500/502/503, temporary outage) — a stored token may still be perfectly valid, so a
+  // non-definitive failure must never clear it. This function makes one attempt only; retrying
+  // on a non-definitive failure is the caller's responsibility (see the startup effect below),
+  // exactly mirroring web's split between the thunk (one attempt) and AuthContext.jsx's own
+  // retry loop — not duplicated here, so other callers (post-purchase/post-onboarding refresh)
+  // keep their existing single-attempt behavior unchanged.
+  const checkAuthRaw = useCallback(async () => {
+    const token = await tokenService.get();
+    if (!token) {
+      setUser(null);
+      return { resolved: null, definitive: true };
+    }
     try {
-      const token = await tokenService.get();
-      if (!token) {
-        setUser(null);
-        return null;
-      }
       const { data } = await authApi.me();
       const resolved = data.user ?? data;
       setUser(resolved);
-      return resolved;
-    } catch {
-      setUser(null);
-      return null;
+      return { resolved, definitive: true };
+    } catch (err) {
+      const definitive = err?.response?.status === 401;
+      if (definitive) {
+        setUser(null);
+      }
+      return { resolved: null, definitive };
     }
   }, []);
 
+  // Public API — return contract (resolved user or null, never throws) is unchanged from
+  // before, so every existing caller (ChallengeLanding, OnboardingScreen, ChallengeScreen) keeps
+  // working exactly as-is.
+  const checkAuth = useCallback(async () => {
+    const { resolved } = await checkAuthRaw();
+    return resolved;
+  }, [checkAuthRaw]);
+
   // ── Startup init ────────────────────────────────────────────────────────
+  // Mirrors web's AuthContext.jsx mount effect exactly: capped-backoff retry
+  // (Math.min(2000 * attempt, 15000)) on non-definitive failures only; a definitive failure or a
+  // success both resolve `loading` immediately. `cancelled` mirrors web's own cleanup guard.
   useEffect(() => {
-    const init = async () => {
-      await checkAuth();
-      setLoading(false);
+    let cancelled = false;
+    let attempt = 0;
+
+    const tryCheck = async () => {
+      if (cancelled) return;
+      const { definitive } = await checkAuthRaw();
+      if (cancelled) return;
+      if (definitive) {
+        setLoading(false);
+        return;
+      }
+      attempt += 1;
+      const delay = Math.min(2000 * attempt, 15000);
+      setTimeout(tryCheck, delay);
     };
-    init();
-  }, [checkAuth]);
+
+    tryCheck();
+    return () => { cancelled = true; };
+  }, [checkAuthRaw]);
 
   // ── Register forced-logout handler with the Axios interceptor ───────────
   // Fires when any response returns 401 (expired/invalid token).

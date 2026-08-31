@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +17,7 @@ import { journalApi } from "../src/api/journal";
 import { tokenService } from "../src/services/tokenService";
 import { formatDate, formatMoney, moneyColor } from "../src/utils/format";
 import { useAlert } from "../src/context/AlertContext";
+import { ChartReviewResult } from "../components/journal/ChartReviewModal";
 
 import { DISPLAY, MONO, BODY } from "../src/theme/typography";
 
@@ -113,58 +115,11 @@ function ChartSlot({ label, accentColor, path, file, onPick, token }) {
   );
 }
 
-function ChartReviewResult({ review }) {
-  if (!review) return null;
-  return (
-    <View style={s.reviewCard}>
-      {review.verdict ? (
-        <View style={s.reviewVerdict}>
-          <Text style={s.reviewVerdictLabel}>VERDICT</Text>
-          <Text style={s.reviewVerdictText}>{review.verdict}</Text>
-        </View>
-      ) : null}
-      {review.strengths?.length ? (
-        <View style={s.reviewSection}>
-          <Text style={s.reviewSectionLabel}>STRENGTHS</Text>
-          {review.strengths.map((str, i) => (
-            <View key={i} style={s.reviewBullet}>
-              <View style={[s.reviewDot, { backgroundColor: PRIMARY }]} />
-              <Text style={s.reviewBulletText}>{str}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-      {review.mistakes?.length ? (
-        <View style={s.reviewSection}>
-          <Text style={s.reviewSectionLabel}>MISTAKES</Text>
-          {review.mistakes.map((m, i) => (
-            <View key={i} style={s.reviewBullet}>
-              <View style={[s.reviewDot, { backgroundColor: RED }]} />
-              <Text style={s.reviewBulletText}>{m}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-      {review.matches?.length ? (
-        <View style={s.reviewSection}>
-          <Text style={s.reviewSectionLabel}>PATTERN MATCHES</Text>
-          {review.matches.map((m, i) => (
-            <View key={i} style={s.reviewBullet}>
-              <View style={[s.reviewDot, { backgroundColor: AMBER }]} />
-              <Text style={s.reviewBulletText}>{m}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-      {review.recommendation ? (
-        <View style={s.reviewSection}>
-          <Text style={s.reviewSectionLabel}>RECOMMENDATION</Text>
-          <Text style={s.reviewBulletText}>{review.recommendation}</Text>
-        </View>
-      ) : null}
-    </View>
-  );
-}
+// ChartReviewResult is now imported from components/journal/ChartReviewModal.js — that copy is
+// the correct, verified port of web's ChartReviewResult (validation match/mismatch copy, "Coach
+// Summary", Mistakes/Strengths against the real API schema: verdict/before_match/after_match/
+// before_issue/after_issue/summary/mistakes/strengths). This screen previously reimplemented its
+// own version using fields ("matches", "recommendation") the API never actually returns.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -181,10 +136,26 @@ export default function TradeDetailScreen({ navigation, route }) {
   const [afterFile, setAfterFile] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [feedback, setFeedback] = useState(entry?.chart_review_feedback || "");
+  const [savedFeedback, setSavedFeedback] = useState(entry?.chart_review_feedback || "");
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
 
   useEffect(() => {
     tokenService.get().then((t) => setToken(t || ""));
   }, []);
+
+  const saveFeedback = async () => {
+    setFeedbackBusy(true);
+    try {
+      await journalApi.reviewFeedback(entry.entry_id, feedback);
+      setSavedFeedback(feedback);
+      showAlert({ type: "success", title: "Saved", message: "Feedback saved to this trade." });
+    } catch (e) {
+      showAlert({ type: "error", title: "Error", message: e?.response?.data?.detail || "Could not save feedback." });
+    } finally {
+      setFeedbackBusy(false);
+    }
+  };
 
   const result = (entry.result || "").toLowerCase();
   const direction = (entry.direction || "").toLowerCase();
@@ -311,7 +282,7 @@ export default function TradeDetailScreen({ navigation, route }) {
           </View>
 
           {/* Trade name */}
-          <Text style={s.tradeName}>{entry.trade_name || "Untitled Trade"}</Text>
+          <Text style={s.tradeName}>{entry.trade_name}</Text>
 
           {/* Date */}
           <View style={s.dateRow}>
@@ -414,10 +385,36 @@ export default function TradeDetailScreen({ navigation, route }) {
 
           {!review ? (
             <Text style={s.analyzeHint}>
-              Add your before (setup) &amp; after (outcome) charts — AI spots the mistakes and strengths.
+              Add your before (setup) &amp; after (outcome) charts — GPT spots the mistakes and strengths.
             </Text>
           ) : (
-            <ChartReviewResult review={review} />
+            <>
+              <ChartReviewResult review={review} />
+              <View style={s.feedbackWrap}>
+                <Text style={s.feedbackLabel}>Your feedback on this analysis</Text>
+                <TextInput
+                  style={s.feedbackInput}
+                  value={feedback}
+                  onChangeText={setFeedback}
+                  placeholder="Do you agree with the AI? Add your own takeaways, what you'd do differently, or notes for next time..."
+                  placeholderTextColor="rgba(255,255,255,0.30)"
+                  multiline
+                  numberOfLines={3}
+                />
+                <View style={s.feedbackFooter}>
+                  {savedFeedback && feedback === savedFeedback ? (
+                    <Text style={s.feedbackSaved}>Saved ✓</Text>
+                  ) : null}
+                  <TouchableOpacity
+                    style={[s.feedbackSaveBtn, (feedbackBusy || feedback === savedFeedback) && { opacity: 0.5 }]}
+                    onPress={saveFeedback}
+                    disabled={feedbackBusy || feedback === savedFeedback}
+                  >
+                    <Text style={s.feedbackSaveBtnText}>{feedbackBusy ? "Saving..." : "Save Feedback"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
           )}
         </View>
 
@@ -509,7 +506,7 @@ export default function TradeDetailScreen({ navigation, route }) {
               color="#000"
               style={{ marginRight: 6 }}
             />
-            <Text style={s.pdfBtnText}>{downloading ? "Downloading..." : "Download PDF"}</Text>
+            <Text style={s.pdfBtnText}>Download PDF</Text>
           </TouchableOpacity>
         </View>
 
@@ -713,6 +710,58 @@ const s = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1,
     textAlign: "center",
+  },
+
+  feedbackWrap: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: GLASS_BORDER,
+  },
+  feedbackLabel: {
+    color: "rgba(255,255,255,0.45)",
+    fontFamily: MONO.regular,
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  feedbackInput: {
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#fff",
+    fontFamily: BODY.regular,
+    fontSize: 13,
+    textAlignVertical: "top",
+    minHeight: 72,
+  },
+  feedbackFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+  },
+  feedbackSaved: {
+    color: PRIMARY,
+    fontFamily: MONO.regular,
+    fontSize: 10,
+  },
+  feedbackSaveBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: GLASS_BORDER,
+  },
+  feedbackSaveBtnText: {
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: BODY.regular,
+    fontSize: 13,
   },
 
   // Chart review result

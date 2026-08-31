@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   RefreshControl,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -20,10 +21,21 @@ import { PRIMARY } from "../components/auth/AuthStyles";
 import { DISPLAY, MONO, BODY } from "../src/theme/typography";
 import { useAuth } from "../src/hooks/useAuth";
 import { supportApi } from "../src/api/support";
+import { sessionsApi } from "../src/api/sessions";
 import { extractApiError } from "../src/utils/apiError";
 import { useAlert } from "../src/context/AlertContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+// Matches web Support.jsx's SESSION_STATUS_STYLE/LABEL exactly.
+const SESSION_STATUS_COLOR = {
+  booked:      { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.30)", text: "#fcd34d" },
+  joined:      { bg: "rgba(14,165,233,0.15)", border: "rgba(14,165,233,0.30)", text: "#7dd3fc" },
+  completed:   { bg: "rgba(57,255,20,0.15)",  border: "rgba(57,255,20,0.30)",  text: PRIMARY },
+  cancelled:   { bg: "rgba(244,63,94,0.15)",  border: "rgba(244,63,94,0.30)",  text: "#fda4af" },
+  rescheduled: { bg: "rgba(255,255,255,0.10)", border: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.50)" },
+};
+const SESSION_STATUS_LABEL = { booked: "Booked", joined: "Joined", completed: "Completed", cancelled: "Cancelled", rescheduled: "Rescheduled" };
 
 const REQ_TYPES = [
   { key: "support_call",    label: "Request Support Call",              icon: "call-outline",      desc: "Talk to our team for help with the platform." },
@@ -35,12 +47,14 @@ const REQ_TYPES = [
 const TYPE_LABEL = Object.fromEntries(REQ_TYPES.map((t) => [t.key, t.label]));
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Status colors matching web: open=amber, answered=neon, resolved=dim
+// Status colors — matches web Support.jsx's STATUS_STYLE exactly:
+// open/in_progress = amber, answered = neon, resolved/closed = dim
 const STATUS_COLOR = {
   open:        { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.30)", text: "#fcd34d" },
-  in_progress: { bg: "rgba(57,255,20,0.15)",  border: "rgba(57,255,20,0.30)",  text: PRIMARY },
+  in_progress: { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.30)", text: "#fcd34d" },
+  answered:    { bg: "rgba(57,255,20,0.15)",  border: "rgba(57,255,20,0.30)",  text: PRIMARY },
   resolved:    { bg: "rgba(255,255,255,0.10)", border: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.50)" },
-  closed:      { bg: "rgba(255,255,255,0.08)", border: "rgba(255,255,255,0.12)", text: "rgba(255,255,255,0.30)" },
+  closed:      { bg: "rgba(255,255,255,0.10)", border: "rgba(255,255,255,0.15)", text: "rgba(255,255,255,0.50)" },
 };
 
 function fmt(ts) {
@@ -61,6 +75,17 @@ export default function SupportScreen({ navigation }) {
   const [form, setForm] = useState({ name: user?.name || "", email: user?.email || "", mobile: user?.mobile || "", reason: "" });
   const [formErrors, setFormErrors] = useState({});
   const [busy, setBusy] = useState(false);
+
+  // ── Mentor sessions (read-only — agent/mentor drive the status) ─────────────
+  // Hidden entirely until the first booking exists, matching web's MySessions() exactly.
+  const [mentorSessions, setMentorSessions] = useState([]);
+  useEffect(() => {
+    let active = true;
+    sessionsApi.myMentorSessions()
+      .then((r) => { if (active) setMentorSessions(r.data || []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // ── Requests / thread state ────────────────────────────────────────────────
   const [requests, setRequests] = useState([]);
@@ -111,7 +136,9 @@ export default function SupportScreen({ navigation }) {
     try {
       await supportApi.submit({
         subject: REQ_TYPES.find((t) => t.key === activeType)?.label || activeType,
-        description: form.reason,
+        // Matches web Support.jsx's submit(): embeds contact info into the description since the
+        // ticket payload itself has no separate name/mobile/email fields.
+        description: `${form.reason.trim()}\n\n— Contact: ${form.name.trim()} · ${form.mobile.trim()} · ${form.email.trim()}`,
         category: activeType,
       });
       setActiveType(null);
@@ -204,6 +231,46 @@ export default function SupportScreen({ navigation }) {
             ))}
           </View>
 
+          {/* ── Your One-On-One Sessions — hidden entirely until a booking exists ── */}
+          {mentorSessions.length > 0 && (
+            <View style={s.requestsSection}>
+              <View style={s.requestsHeader}>
+                <Ionicons name="videocam-outline" size={16} color={PRIMARY} />
+                <Text style={s.requestsHeading}>Your One-On-One Sessions</Text>
+              </View>
+              {mentorSessions.map((sess) => {
+                const st = SESSION_STATUS_COLOR[sess.status] || SESSION_STATUS_COLOR.rescheduled;
+                const canJoin = (sess.status === "booked" || sess.status === "joined") && !!sess.meet_link;
+                return (
+                  <View key={sess.session_id} style={s.mentorSessionCard}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.mentorSessionName}>{sess.mentor_name || "Your mentor"}</Text>
+                      <Text style={s.mentorSessionMeta}>
+                        {sess.date} at {sess.start_time} · {sess.duration_min} min
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <View style={[s.statusBadge, { backgroundColor: st.bg, borderColor: st.border }]}>
+                        <Text style={[s.statusBadgeText, { color: st.text }]}>
+                          {SESSION_STATUS_LABEL[sess.status] || sess.status}
+                        </Text>
+                      </View>
+                      {canJoin && (
+                        <TouchableOpacity
+                          style={s.joinMeetBtn}
+                          onPress={() => Linking.openURL(sess.meet_link).catch(() => {})}
+                        >
+                          <Ionicons name="open-outline" size={13} color="#000" />
+                          <Text style={s.joinMeetBtnText}>Join Meet</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {/* ── Your Requests ── */}
           <View style={s.requestsSection}>
             <View style={s.requestsHeader}>
@@ -274,16 +341,17 @@ export default function SupportScreen({ navigation }) {
                               </Text>
                             </View>
 
-                            {/* Reply bubbles */}
+                            {/* Reply bubbles — author_role is the real API field (matches web
+                                Support.jsx's m.author_role !== "user" check) */}
                             {replies.map((m, i) => (
                               <View
-                                key={i}
-                                style={[s.bubble, m.from === "staff" ? s.bubbleStaff : s.bubbleUser]}
+                                key={m.reply_id ?? i}
+                                style={[s.bubble, m.author_role !== "user" ? s.bubbleStaff : s.bubbleUser]}
                               >
-                                <Text style={m.from === "staff" ? s.bubbleAuthorStaff : s.bubbleAuthorUser}>
-                                  {m.from === "staff" ? "Support Team" : (m.author || "You")} · {fmt(m.createdAt || m.at)}
+                                <Text style={m.author_role !== "user" ? s.bubbleAuthorStaff : s.bubbleAuthorUser}>
+                                  {m.author_role !== "user" ? "Support Team" : "You"} · {fmt(m.created_at)}
                                 </Text>
-                                <Text style={s.bubbleText}>{m.content || m.message}</Text>
+                                <Text style={s.bubbleText}>{m.content}</Text>
                               </View>
                             ))}
 
@@ -596,6 +664,46 @@ const s = StyleSheet.create({
     borderColor: CARD_BORDER,
     borderRadius: 16,
     overflow: "hidden",
+  },
+
+  // ── Mentor session card ──────────────────────────────────────────────────
+  mentorSessionCard: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+  },
+  mentorSessionName: {
+    color: TEXT_COLOR,
+    fontSize: 15,
+    fontFamily: DISPLAY.bold,
+  },
+  mentorSessionMeta: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 13,
+    fontFamily: BODY.regular,
+    marginTop: 2,
+  },
+  joinMeetBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: PRIMARY,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  joinMeetBtnText: {
+    color: "#000",
+    fontSize: 12,
+    fontFamily: DISPLAY.bold,
   },
 
   requestHeaderRow: {
