@@ -4,6 +4,11 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AppTabs from "../../navigation/AppTabs";
 import TradeDetailScreen from "../../screens/TradeDetailScreen";
 import JournalNewScreen from "../../screens/JournalNewScreen";
+import OneClickAnalysisScreen from "../../screens/OneClickAnalysisScreen";
+import TradePlanScreen from "../../screens/TradePlanScreen";
+import ChartAnalyzeScreen from "../../screens/ChartAnalyzeScreen";
+import CreatePasswordScreen from "../../screens/auth/CreatePasswordScreen";
+import ChangeContactScreen from "../../screens/ChangeContactScreen";
 import { APP_ROUTES } from "../constants/routes";
 import { useNavLoading } from "../context/NavLoadingContext";
 
@@ -38,6 +43,41 @@ export default function AppStack() {
           name={APP_ROUTES.JOURNAL_NEW}
           component={JournalNewScreen}
           options={{ animation: "slide_from_right" }}
+        />
+
+        {/* One-Click Analysis — web equivalent: src/pages/dashboard/OneClickAnalysis.jsx */}
+        <Stack.Screen
+          name={APP_ROUTES.ONE_CLICK_ANALYSIS}
+          component={OneClickAnalysisScreen}
+          options={{ animation: "slide_from_right" }}
+        />
+
+        {/* Trade Plan — web equivalent: src/pages/dashboard/TradePlan.jsx */}
+        <Stack.Screen
+          name={APP_ROUTES.TRADE_PLAN}
+          component={TradePlanScreen}
+          options={{ animation: "slide_from_right" }}
+        />
+
+        {/* Chart Analysis — web equivalent: ChartAnalyzePanel.jsx + IntradayFlow.jsx */}
+        <Stack.Screen
+          name={APP_ROUTES.CHART_ANALYZE}
+          component={ChartAnalyzeScreen}
+          options={{ animation: "slide_from_right" }}
+        />
+
+        {/* Create Password (social-only accounts) — web equivalent: PasswordFlowModal.jsx mode="create" */}
+        <Stack.Screen
+          name={APP_ROUTES.CREATE_PASSWORD}
+          component={CreatePasswordScreen}
+          options={{ animation: "slide_from_bottom", presentation: "modal" }}
+        />
+
+        {/* Change Email / Change Mobile — web equivalent: ChangeContactModal.jsx */}
+        <Stack.Screen
+          name={APP_ROUTES.CHANGE_CONTACT}
+          component={ChangeContactScreen}
+          options={{ animation: "slide_from_bottom", presentation: "modal" }}
         />
       </Stack.Navigator>
 

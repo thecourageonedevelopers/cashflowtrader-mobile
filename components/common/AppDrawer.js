@@ -5,9 +5,9 @@
  * React Web exactly. Web is the ONLY source of truth.
  *
  * Web LINKS order (source: DashboardLayout.jsx):
- *   1. Overview        — LayoutDashboard → home-outline
+ *   1. Overview        — LayoutDashboard → grid-outline
  *   2. 21-Day Challenge — CalendarDays   → calendar-outline
- *   3. Auto Journal    — NotebookPen     → book-outline
+ *   3. Auto Journal    — NotebookPen     → create-outline
  *   4. Live Sessions   — Radio           → radio-outline
  *   5. Progress        — Activity        → pulse-outline
  *   6. Support         — HeadphonesIcon  → headset-outline
@@ -34,6 +34,7 @@ import { PRIMARY } from "../auth/AuthStyles";
 import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import DrawerItem from "./DrawerItem";
 import { useAuth } from "../../src/context/AuthContext";
+import { TAB_ROUTES } from "../../src/constants/routes";
 
 // ─── Design tokens (matching web DashboardLayout.jsx) ────────────────────────
 const NEON = "#39FF14";
@@ -42,12 +43,12 @@ const BORDER_DIM = "rgba(255,255,255,0.10)";
 
 // ─── Menu items — exact order from web LINKS array ────────────────────────────
 const MENU_ITEMS = [
-  { icon: "home-outline",      label: "Overview",         route: "OverviewScreen"  },
-  { icon: "calendar-outline",  label: "21-Day Challenge", route: "ChallengeScreen" },
-  { icon: "book-outline",      label: "Auto Journal",     route: "JournalScreen"   },
-  { icon: "radio-outline",     label: "Live Sessions",    route: "SessionsScreen"  },
-  { icon: "pulse-outline",     label: "Progress",         route: "ProgressScreen"  },
-  { icon: "headset-outline",   label: "Support",          route: "SupportScreen"   },
+  { icon: "grid-outline",      label: "Overview",         route: TAB_ROUTES.OVERVIEW  },
+  { icon: "calendar-outline",  label: "21-Day Challenge", route: TAB_ROUTES.CHALLENGE },
+  { icon: "create-outline",    label: "Auto Journal",     route: TAB_ROUTES.JOURNAL   },
+  { icon: "radio-outline",     label: "Live Sessions",    route: TAB_ROUTES.SESSIONS  },
+  { icon: "pulse-outline",     label: "Progress",         route: TAB_ROUTES.PROGRESS  },
+  { icon: "headset-outline",   label: "Support",          route: TAB_ROUTES.SUPPORT   },
 ];
 
 // ─── Admin label logic — mirrors web DashboardLayout.jsx ─────────────────────
@@ -61,17 +62,45 @@ function getStaffLabel(user) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, permanent = false }) {
+export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, extraPrograms = [], permanent = false }) {
   const { user, hasChallengeAccess, logout } = useAuth();
 
   // Web checks user?.is_staff for admin/staff visibility
   const isStaff = !!user?.is_staff;
   const staffLabel = useMemo(() => getStaffLabel(user), [user]);
 
+  // Auto Journal is a paid-challenge feature (DashboardLayout.jsx's requireChallengeUnlocked +
+  // canSeeJournal) — staff/admin still see it, same bypass as web.
+  const canSeeJournal = !!user?.challenge_unlocked || !!user?.is_admin || !!user?.is_staff;
+
+  // Other active programs (Mentorship Program, any future course) — inserted between
+  // "21-Day Challenge" and "Auto Journal", exact same slot web's LINKS.slice(0,2) + programLinks +
+  // LINKS.slice(2) uses (DashboardLayout.jsx). Each reuses ChallengeScreen with a different
+  // programId param, mirroring how web reuses the same <Challenge/> route component for
+  // /dashboard/programs/:programId.
+  const displayItems = useMemo(() => {
+    // activeId matches the screenIdentity ChallengeScreen.js computes and hands to ScreenLayout —
+    // "ChallengeScreen" for the legacy program (the static link below), "ChallengeScreen:<id>" for
+    // any other program — so exactly one link highlights, mirroring web's NavLink comparing the
+    // current URL path (/dashboard/challenge vs /dashboard/programs/:id) rather than just a screen
+    // name with no program awareness.
+    const programItems = extraPrograms.map((p) => ({
+      icon: "book-outline",
+      label: p.name,
+      route: TAB_ROUTES.CHALLENGE,
+      params: { programId: p.program_id },
+      activeId: `ChallengeScreen:${p.program_id}`,
+      key: `program-${p.program_id}`,
+    }));
+    const base = MENU_ITEMS.filter((item) => item.route !== TAB_ROUTES.JOURNAL || canSeeJournal)
+      .map((item) => ({ ...item, key: item.route, activeId: item.route }));
+    return [...base.slice(0, 2), ...programItems, ...base.slice(2)];
+  }, [extraPrograms, canSeeJournal]);
+
   const navHandlers = useMemo(() => {
     const routes = [
       ...MENU_ITEMS.map((i) => i.route),
-      "ProfileScreen",
+      TAB_ROUTES.PROFILE,
       "AdminScreen",
     ];
     return Object.fromEntries(routes.map((r) => [r, () => onNavigate(r)]));
@@ -134,13 +163,13 @@ export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, per
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        {MENU_ITEMS.map((item) => (
+        {displayItems.map((item) => (
           <DrawerItem
-            key={item.route}
+            key={item.key}
             icon={item.icon}
             label={item.label}
-            isActive={currentScreen === item.route}
-            onPress={navHandlers[item.route]}
+            isActive={currentScreen === item.activeId}
+            onPress={item.params ? () => onNavigate(item.route, item.params) : navHandlers[item.route]}
           />
         ))}
 
@@ -166,7 +195,7 @@ export default memo(function AppDrawer({ currentScreen, onNavigate, onClose, per
         <DrawerItem
           icon="person-circle-outline"
           label="My Profile"
-          isActive={currentScreen === "ProfileScreen"}
+          isActive={currentScreen === TAB_ROUTES.PROFILE}
           onPress={navHandlers.ProfileScreen}
         />
 

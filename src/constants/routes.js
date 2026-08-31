@@ -2,8 +2,10 @@
 export const AUTH_ROUTES = {
   SIGN_IN: "SignIn",
   SIGN_UP: "SignUp",
+  FORGOT_PASSWORD: "ForgotPassword",
   AUTH_CALLBACK: "AuthCallback",
   ONBOARDING: "Onboarding",
+  LEGAL: "Legal",
 };
 
 // App stack (root)
@@ -12,6 +14,11 @@ export const APP_ROUTES = {
   TRADE_DETAIL: "TradeDetail",
   AI_COACH: "AiCoach",
   JOURNAL_NEW: "JournalNew",
+  ONE_CLICK_ANALYSIS: "OneClickAnalysis",
+  TRADE_PLAN: "TradePlan",
+  CHART_ANALYZE: "ChartAnalyze",
+  CREATE_PASSWORD: "CreatePassword",
+  CHANGE_CONTACT: "ChangeContact",
 };
 
 // Bottom tab screen names (match existing AppTabs.js)

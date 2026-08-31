@@ -54,7 +54,28 @@ export default {
     plugins: [
       "expo-font",
       "expo-web-browser",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-asset",
+      [
+        "expo-audio",
+        {
+          microphonePermission: "Allow Cashflow Trader to access your microphone to record voice notes for your trades.",
+        },
+      ],
+      // Android 9+ (API 28+) blocks plaintext HTTP by default (usesCleartextTraffic defaults to
+      // false). EXPO_PUBLIC_API_URL points at a plain-http LAN backend during local/device dev
+      // (see .env) — without this, every API call from a physical device or emulator would fail
+      // at the OS network layer before ever reaching the app's own code. HTTPS traffic (production
+      // API, TradingView/legal WebViews) is unaffected either way — this only stops the platform
+      // from blocking cleartext, it doesn't disable TLS anywhere.
+      [
+        "expo-build-properties",
+        {
+          android: {
+            usesCleartextTraffic: true,
+          },
+        },
+      ],
     ],
 
     extra: {

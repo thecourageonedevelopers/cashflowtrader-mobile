@@ -30,9 +30,17 @@ import { profileApi } from "../src/api/profile";
 import { journalApi } from "../src/api/journal";
 import { sessionsApi } from "../src/api/sessions";
 import { transformationApi } from "../src/api/transformation";
+import { challengeApi } from "../src/api/challenge";
 import { useAlert } from "../src/context/AlertContext";
+import { formatTimeSlot } from "../src/utils/tz";
+import ExpiryWarningBanner from "../components/challenge/ExpiryWarningBanner";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
+
+// Web's Row 6 (PerformanceAnalytics, DashboardHome.jsx) is commented out of the production
+// render tree — muted/secondary, not shown to users. Mirroring that here without deleting the
+// section, in case it's re-enabled on web later.
+const PERFORMANCE_REPORT_CARD_ENABLED = false;
 
 const DAYS = [
   "01", "02", "03", "04", "05", "06", "07",
@@ -272,6 +280,12 @@ export default function OverviewScreen({ navigation }) {
 
   const { user } = useAuth();
   const money = useMoney();
+  // Auto Journal is a paid-challenge feature (DashboardLayout.jsx's requireChallengeUnlocked +
+  // canSeeJournal) — staff/admin still see it, same bypass as web. Overview specifically mirrors
+  // DashboardHome.jsx:296-300's stricter version (not DashboardLayout.jsx's), which also treats
+  // an expired/blocked grant as not-unlocked — challenge_unlocked itself never flips back off.
+  const accessLapsed = user?.access_status === "expired" || user?.access_status === "blocked";
+  const canSeeJournal = (!!user?.challenge_unlocked && !accessLapsed) || !!user?.is_admin || !!user?.is_staff;
 
   // ─── State ───────────────────────────────────────────────────────────────
   const [now, setNow] = useState(new Date());
@@ -313,6 +327,13 @@ export default function OverviewScreen({ navigation }) {
   const { data: journals, refetch: refetchJournals } = useQuery({
     queryKey: ["journals"],
     queryFn: () => journalApi.list().then((r) => r.data),
+  });
+
+  // Sole purpose: drive ExpiryWarningBanner below, mirroring web DashboardHome.jsx's own
+  // independent /challenge/lessons fetch for the exact same reason.
+  const { data: challengeLessons } = useQuery({
+    queryKey: ["challengeLessons", "21-day-challenge"],
+    queryFn: () => challengeApi.lessons().then((r) => r.data),
   });
 
   // ─── Timer (session live/upcoming/ended) ─────────────────────────────────
@@ -414,13 +435,11 @@ export default function OverviewScreen({ navigation }) {
   const disciplineToday = dbDiscipline?.today ?? progress?.personal_progress_score ?? 0;
   const avatarInitial = (user?.name || "T").trim().charAt(0).toUpperCase();
 
-  // Challenge (transformation preferred)
-  const completedDaysSet = useMemo(() => {
-    const days = dbTransform?.completed_days;
-    if (days?.length) return new Set(days.map((d) => String(d).padStart(2, "0")));
-    return new Set();
-  }, [dbTransform]);
-  const completedCount = completedDaysSet.size;
+  // Challenge (transformation preferred) — /transformation/dashboard's completed_days is a plain
+  // count (number), not an array, exactly like web's `t.completed_days` (DashboardHome.jsx:524,555)
+  // and matching the day-pip logic just below, which already reads it this way. This used to be
+  // wrongly treated as an array here, which silently produced 0 regardless of real progress.
+  const completedCount = dbTransform?.completed_days ?? 0;
   const challengePct = dbTransform?.challenge_pct ?? progress?.challenge_completion_percent ?? 0;
   const challengeDay = dbTransform?.current_day ?? 1;
   const challengeTotal = dbTransform?.total_days ?? 21;
@@ -497,6 +516,17 @@ export default function OverviewScreen({ navigation }) {
           }
         >
 
+          {challengeLessons && (
+            <View style={{ marginBottom: 16 }}>
+              <ExpiryWarningBanner
+                cutoffAt={challengeLessons.cutoff_at}
+                cutoffReason={challengeLessons.cutoff_reason}
+                accessStatus={challengeLessons.access_status}
+                warningDays={challengeLessons.expiry_warning_days}
+              />
+            </View>
+          )}
+
           {/* ══════════════════════════════════════════════════════════════
               MOBILE HERO  (mobile-specific greeting, not in web)
           ══════════════════════════════════════════════════════════════ */}
@@ -511,10 +541,12 @@ export default function OverviewScreen({ navigation }) {
                   <Ionicons name="calendar-outline" size={16} color="#000" />
                   <Text style={styles.heroPrimaryText}>Start 21-Day Challenge</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.heroSecondary} onPress={() => navigation.navigate("JournalScreen")}>
-                  <Ionicons name="scan-outline" size={16} color="#fff" />
-                  <Text style={styles.heroSecondaryText}>Auto Journal</Text>
-                </TouchableOpacity>
+                {canSeeJournal && (
+                  <TouchableOpacity style={styles.heroSecondary} onPress={() => navigation.navigate("JournalScreen")}>
+                    <Ionicons name="scan-outline" size={16} color="#fff" />
+                    <Text style={styles.heroSecondaryText}>Auto Journal</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -998,7 +1030,7 @@ export default function OverviewScreen({ navigation }) {
                   <Ionicons name="radio-outline" size={11} color="rgba(57,255,20,0.8)" />
                   <Text style={styles.chipText}>Live Support · Today</Text>
                 </View>
-                <Text style={styles.liveSubtitle}>Need guidance? You're not trading alone.</Text>
+                <Text style={styles.liveSubtitle}>Need guidance today? You're not trading alone.</Text>
               </View>
               <TouchableOpacity onPress={() => navigation.navigate("SessionsScreen")} style={styles.openLink}>
                 <Text style={styles.openLinkText}>All sessions</Text>
@@ -1015,17 +1047,22 @@ export default function OverviewScreen({ navigation }) {
             ) : (
               dbSessions.map((s) => {
                 const timing = sessionTiming(s, now);
-                const isLive = timing.status === "live";
-                const ended = timing.status === "ended";
+                // Join gating must reflect the mentor's actual Start/End action (s.status), not
+                // just the clock — otherwise traders can join the instant the scheduled time
+                // arrives, matching web's DashboardHome.jsx:845-850 exactly.
+                const statusVal = s.status || "Scheduled";
+                const isLive = statusVal === "Live";
+                const ended = statusVal === "Ended";
+                const label = isLive ? "Live now" : ended ? "Ended" : timing.label;
                 return (
                   <View key={s.session_id} style={[styles.sessionCard, isLive && styles.sessionCardLive]}>
                     {/* Time slot + timing badge */}
                     <View style={styles.row}>
-                      <Text style={styles.sessionTimeSlot}>{s.time_slot}</Text>
+                      <Text style={styles.sessionTimeSlot}>{formatTimeSlot(s.time_slot)}</Text>
                       <View style={styles.row}>
                         {isLive && <View style={styles.livePulseDot} />}
                         <Text style={[styles.sessionTimingLabel, isLive && { color: PRIMARY }, ended && { color: "#444" }]}>
-                          {timing.label}
+                          {label}
                         </Text>
                       </View>
                     </View>
@@ -1036,13 +1073,13 @@ export default function OverviewScreen({ navigation }) {
                     ) : null}
                     {/* Join button (matching web neon-btn / outlined styles) */}
                     <TouchableOpacity
-                      onPress={() => !ended && joinSession(s)}
-                      disabled={ended}
-                      style={[styles.joinBtn, isLive && styles.joinBtnLive, ended && styles.joinBtnEnded]}
+                      onPress={() => isLive && joinSession(s)}
+                      disabled={!isLive}
+                      style={[styles.joinBtn, isLive && styles.joinBtnLive, !isLive && styles.joinBtnEnded]}
                     >
-                      <Ionicons name="videocam-outline" size={14} color={ended ? "#444" : isLive ? "#000" : "#fff"} />
-                      <Text style={[styles.joinBtnText, isLive && { color: "#000" }, ended && { color: "#444" }]}>
-                        {ended ? "Ended" : isLive ? "Join Now" : "Join"}
+                      <Ionicons name="videocam-outline" size={14} color={isLive ? "#000" : "#444"} />
+                      <Text style={[styles.joinBtnText, isLive && { color: "#000" }, !isLive && { color: "#444" }]}>
+                        {ended ? "Ended" : isLive ? "Join Now" : "Not Started"}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1055,7 +1092,10 @@ export default function OverviewScreen({ navigation }) {
               ROW 6 — PERFORMANCE ANALYTICS  (web: opacity-70, secondary)
               "Keep your eyes above this line."
               Net P&L / Win Rate / Trades + mobile extras (goal, weekly, records)
+              Web keeps this commented out of its production render (DashboardHome.jsx) —
+              PERFORMANCE_REPORT_CARD_ENABLED mirrors that muted state.
           ══════════════════════════════════════════════════════════════ */}
+          {PERFORMANCE_REPORT_CARD_ENABLED && (
           <View style={styles.perfSection}>
             {/* Header: chip + "Full analytics →" link */}
             <View style={[styles.row, { justifyContent: "space-between" }]}>
@@ -1169,6 +1209,7 @@ export default function OverviewScreen({ navigation }) {
               </View>
             </View> */}
           </View>
+          )}
 
         </ScrollView>
       </ScreenLayout>

@@ -1,5 +1,5 @@
 import React, {
-  useState, useEffect, useRef, useCallback,
+  useState, useEffect, useRef, useCallback, useContext, createContext,
 } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
@@ -9,7 +9,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import * as WebBrowser from "expo-web-browser";
 import {
   useQuery,
   useMutation,
@@ -24,13 +23,28 @@ import { challengeApi } from "../src/api/challenge";
 import { uploadApi } from "../src/api/upload";
 import { useAlert } from "../src/context/AlertContext";
 import ChallengeLanding from "../components/challenge/ChallengeLanding";
-import PushFormModal from "../components/challenge/PushFormModal";
+import GenericProgramUnlock from "../components/challenge/GenericProgramUnlock";
+import ExpiryWarningBanner from "../components/challenge/ExpiryWarningBanner";
+import SecureVideoPlayer from "../components/challenge/SecureVideoPlayer";
+import {
+  ProgramExpired,
+  AccessBlocked,
+  ChallengeMaintenance,
+} from "../components/challenge/ChallengeAccessState";
+import PushFormModal, { QuestionInput } from "../components/challenge/PushFormModal";
 import AmbientGlow from "../components/common/AmbientGlow";
+import { formsApi } from "../src/api/forms";
+import { visibleQuestions, pruneHiddenAnswers } from "../src/lib/formVisibility";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AMBER = "#F5B43C";
 const DONE_STATUSES = ["completed", "verified", "pending"];
+
+// Carries the active programId down to the item-completion/doubt handlers below without
+// prop-drilling it through every intermediate ItemBody/QuizItem/etc. layer — mirrors web
+// Challenge.jsx's ProgramContext exactly. Set once by ChallengeScreen's <ProgramContext.Provider>.
+const ProgramContext = createContext("21-day-challenge");
 
 // Exactly matches web DAY_META
 const DAY_META = {
@@ -86,14 +100,39 @@ function milestoneTitle(lesson) {
   return (lesson.items || []).find((it) => it.type === "milestone")?.title || `Day ${lesson.day} milestone`;
 }
 
+// Shuffles option *display* order without touching the underlying index-based grading — components
+// still submit/toggle the original option index, only the on-screen order changes. Matches web
+// Challenge.jsx's shuffleIndices exactly.
+function shuffleIndices(n) {
+  const arr = Array.from({ length: n }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function ChallengeScreen({ navigation }) {
-  const { user, checkAuth, hasChallengeAccess } = useAuth();
+export default function ChallengeScreen({ navigation, route }) {
+  const { user, checkAuth, hasChallengeAccess, setUser } = useAuth();
   const { showAlert, showConfirm } = useAlert();
   const qc = useQueryClient();
   const [activeLesson, setActiveLesson] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Route has no programId param for the default (bottom-tab) entry — defaults to the legacy
+  // 21-Day Challenge, same as every existing nav target already points at. A drawer "other active
+  // program" link (see AppDrawer.js's extraPrograms) passes { programId } to reuse this exact same
+  // screen, mirroring web's /dashboard/programs/:programId reusing the same <Challenge/> route.
+  const programId = route?.params?.programId || "21-day-challenge";
+  const isLegacyChallenge = programId === "21-day-challenge";
+  // Web's NavLink highlights a drawer/sidebar link by comparing the current URL path
+  // (/dashboard/challenge vs /dashboard/programs/:id) — mobile has no URL, so this composite key
+  // (plain "ChallengeScreen" for the legacy program, "ChallengeScreen:<id>" for any other) lets
+  // AppDrawer.js tell which exact program link is active, matching web's route-aware highlighting
+  // without changing navigation or the drawer's visuals.
+  const screenIdentity = isLegacyChallenge ? "ChallengeScreen" : `ChallengeScreen:${programId}`;
 
   // Pulse animation for current day card
   const pulseAnim = useRef(new Animated.Value(0.7)).current;
@@ -109,8 +148,8 @@ export default function ChallengeScreen({ navigation }) {
   }, []);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["challengeLessons"],
-    queryFn: () => challengeApi.lessons().then((r) => r.data),
+    queryKey: ["challengeLessons", programId],
+    queryFn: () => challengeApi.lessons(programId).then((r) => r.data),
   });
 
   // Keep the open modal's lesson fresh after refetches
@@ -121,6 +160,18 @@ export default function ChallengeScreen({ navigation }) {
     }
   }, [data]);
 
+  // Caches this program's access_status onto the shared user object so OverviewScreen and
+  // JournalScreen can react to an expired/blocked default-program grant without a fetch of their
+  // own — mirrors web's Challenge.jsx:180-181 exactly, including the same "only the default
+  // program" scope (other programs don't share a single global "challenge_unlocked"-style flag to
+  // attach to). This is a client-side cache populated opportunistically by visiting this screen,
+  // not a fresh per-request check — same caveat web's own ProtectedRoute.jsx documents.
+  useEffect(() => {
+    if (isLegacyChallenge && data?.access_status) {
+      setUser((prev) => (prev ? { ...prev, access_status: data.access_status } : prev));
+    }
+  }, [isLegacyChallenge, data?.access_status, setUser]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refetch();
@@ -130,7 +181,7 @@ export default function ChallengeScreen({ navigation }) {
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <ScreenLayout screenName="ChallengeScreen" navigation={navigation}>
+      <ScreenLayout screenName={screenIdentity} navigation={navigation}>
         <SafeAreaView style={styles.loadingBox}>
           <Text style={styles.loadingText}>Loading...</Text>
         </SafeAreaView>
@@ -140,12 +191,57 @@ export default function ChallengeScreen({ navigation }) {
 
   if (!data) return null;
 
-  // Mirror web: if not purchased → show dedicated landing page
-  if (!data.unlocked) {
+  // Mirrors web Challenge.jsx exactly: maintenance short-circuits before any access-status check,
+  // since a maintenance response has no unlocked/days/etc. fields at all — checking it after would
+  // misread the missing `unlocked` as "never purchased."
+  if (data.maintenance) {
     return (
-      <ScreenLayout screenName="ChallengeScreen" navigation={navigation}>
-        <ChallengeLanding
+      <ScreenLayout screenName={screenIdentity} navigation={navigation}>
+        <ChallengeMaintenance reason={data.reason} />
+      </ScreenLayout>
+    );
+  }
+
+  // Mirror web: access_status distinguishes *why* it's not accessible. Absent entirely means
+  // never purchased (buy screen below); "expired"/"blocked" mean it WAS unlocked and has since
+  // lapsed, which needs a different screen than "here's the price."
+  if (!data.unlocked) {
+    if (data.access_status === "expired") {
+      return (
+        <ScreenLayout screenName={screenIdentity} navigation={navigation}>
+          <ProgramExpired programName={data.program_name} navigation={navigation} />
+        </ScreenLayout>
+      );
+    }
+    if (data.access_status === "blocked") {
+      return (
+        <ScreenLayout screenName={screenIdentity} navigation={navigation}>
+          <AccessBlocked
+            selfRenewalAllowed={data.self_renewal_allowed !== false}
+            navigation={navigation}
+          />
+        </ScreenLayout>
+      );
+    }
+    // Never purchased. The legacy Challenge has its own dedicated VSL landing screen — mobile shows
+    // it directly rather than a router redirect (no public-web route concept to redirect to). Any
+    // other program (Mentorship Program, future courses) has no such landing yet, so it gets a
+    // generic unlock/checkout screen instead — matches web's GenericProgramUnlock exactly.
+    if (isLegacyChallenge) {
+      return (
+        <ScreenLayout screenName={screenIdentity} navigation={navigation}>
+          <ChallengeLanding
+            data={data}
+            onPurchased={async () => { await checkAuth(); await refetch(); }}
+          />
+        </ScreenLayout>
+      );
+    }
+    return (
+      <ScreenLayout screenName={screenIdentity} navigation={navigation}>
+        <GenericProgramUnlock
           data={data}
+          programId={programId}
           onPurchased={async () => { await checkAuth(); await refetch(); }}
         />
       </ScreenLayout>
@@ -197,7 +293,8 @@ export default function ChallengeScreen({ navigation }) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <ScreenLayout screenName="ChallengeScreen" navigation={navigation}>
+    <ProgramContext.Provider value={programId}>
+    <ScreenLayout screenName={screenIdentity} navigation={navigation}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -207,23 +304,41 @@ export default function ChallengeScreen({ navigation }) {
         }
       >
 
+        <ExpiryWarningBanner
+          cutoffAt={data.cutoff_at}
+          cutoffReason={data.cutoff_reason}
+          accessStatus={data.access_status}
+          warningDays={data.expiry_warning_days}
+        />
+
         {/* ══════════════════════════════════════════════════════════════════
             HERO — LEFT: emotional copy
         ════════════════════════════════════════════════════════════════== */}
         <View style={styles.heroLeft}>
-          {/* Zap chip */}
-          <View style={styles.row}>
-            <Ionicons name="flash-outline" size={13} color={PRIMARY} />
-            <Text style={styles.heroStake}>
-              Most people blow their account in week one.{"\n"}You won't be most people.
-            </Text>
-          </View>
+          {/* Zap chip — Challenge-specific stake line, only for the legacy Challenge (matches web) */}
+          {isLegacyChallenge && (
+            <View style={styles.row}>
+              <Ionicons name="flash-outline" size={13} color={PRIMARY} />
+              <Text style={styles.heroStake}>
+                Most people blow their account in week one.{"\n"}You won't be most people.
+              </Text>
+            </View>
+          )}
 
-          {/* H1 — matches web text-4xl sm:text-5xl */}
-          <Text style={styles.heroH1}>
-            <Text style={styles.heroH1Green}>21 days </Text>
-            <Text style={styles.heroH1White}>that decide your future.</Text>
-          </Text>
+          {/* H1 — matches web text-4xl sm:text-5xl; other programs show their own name instead */}
+          {isLegacyChallenge ? (
+            <Text style={styles.heroH1}>
+              <Text style={styles.heroH1Green}>21 days </Text>
+              <Text style={styles.heroH1White}>that decide your future.</Text>
+            </Text>
+          ) : (
+            <Text style={styles.heroH1}>
+              <Text style={styles.heroH1White}>{data.program_name || programId}</Text>
+            </Text>
+          )}
+          {!isLegacyChallenge && !!data.program_description && (
+            <Text style={styles.heroProof}>{data.program_description}</Text>
+          )}
 
           {/* Momentum badge (Flame icon + contextual text) */}
           <View style={styles.momentumBadge}>
@@ -234,7 +349,7 @@ export default function ChallengeScreen({ navigation }) {
           {/* Proof strip — only when unlocked */}
           {data.unlocked && (
             <Text style={styles.heroProof}>
-              {data.streak || 0} days you showed up{"  ·  "}{pct}% to your first withdrawal
+              {data.streak || 0} days you showed up{"  ·  "}{isLegacyChallenge ? `${pct}% to your first withdrawal` : `${pct}% complete`}
             </Text>
           )}
         </View>
@@ -280,7 +395,7 @@ export default function ChallengeScreen({ navigation }) {
                 <Ionicons name="lock-closed-outline" size={13} color="rgba(255,255,255,0.45)" style={{ marginTop: 2 }} />
                 <Text style={styles.nextLockText}>
                   Day {previewDay.day} stays locked until you finish today.{" "}
-                  {DAY_META[previewDay.day]?.hook}
+                  {isLegacyChallenge ? DAY_META[previewDay.day]?.hook : ""}
                 </Text>
               </View>
             )}
@@ -305,9 +420,16 @@ export default function ChallengeScreen({ navigation }) {
         {data.unlocked && (
           <View style={styles.statsGrid}>
             <StatCard icon="flame" label="Days You Showed Up" value={data.streak || 0} />
-            <StatCard icon="sparkles" label="Discipline Points" value={data.earned_points || 0} sub="Most quit by day 5. You're earning what they didn't." />
-            <StatCard icon="trophy" label="Proof You're Different" value={doneCount} suffix={`/${total}`} />
-            <StatCard icon="medal" label="Edge You've Built" value={skillsUnlocked} suffix={` of ${SKILLS_TOTAL}`} accent="amber" />
+            <StatCard
+              icon="sparkles"
+              label={isLegacyChallenge ? "Discipline Points" : "Points Earned"}
+              sub={isLegacyChallenge ? "Most quit by day 5. You're earning what they didn't." : ""}
+              value={data.earned_points || 0}
+            />
+            <StatCard icon="trophy" label={isLegacyChallenge ? "Proof You're Different" : "Days Completed"} value={doneCount} suffix={`/${total}`} />
+            {isLegacyChallenge && (
+              <StatCard icon="medal" label="Edge You've Built" value={skillsUnlocked} suffix={` of ${SKILLS_TOTAL}`} accent="amber" />
+            )}
           </View>
         )}
 
@@ -355,9 +477,11 @@ export default function ChallengeScreen({ navigation }) {
             <View style={styles.row}>
               <Ionicons name="trophy" size={28} color={PRIMARY} />
               <View style={{ marginLeft: 12 }}>
-                <Text style={styles.certTitle}>Challenge Complete 🎉</Text>
+                <Text style={styles.certTitle}>
+                  {isLegacyChallenge ? "Challenge Complete 🎉" : `${data.program_name || "Program"} Complete 🎉`}
+                </Text>
                 <Text style={styles.certCopy}>
-                  Every required item & milestone is verified. You finished the 21-Day Transformation.
+                  Every required item & milestone is verified.{isLegacyChallenge ? " You finished the 21-Day Transformation." : ""}
                 </Text>
               </View>
             </View>
@@ -387,7 +511,7 @@ export default function ChallengeScreen({ navigation }) {
             const done        = completedDays.has(lesson.day);
             const isCurrent   = lesson.day === currentDay;
             const milestone   = isMilestoneDay(lesson);
-            const meta        = DAY_META[lesson.day] || {};
+            const meta        = isLegacyChallenge ? (DAY_META[lesson.day] || {}) : {};
             const skill       = meta.skills?.[0];
             const totalItems  = (lesson.items || []).length;
             const doneItems   = (lesson.items || []).filter((it) =>
@@ -551,6 +675,7 @@ export default function ChallengeScreen({ navigation }) {
       <PushFormModal />
 
     </ScreenLayout>
+    </ProgramContext.Provider>
   );
 }
 
@@ -642,16 +767,19 @@ function DayModal({ lesson, itemProgress, onClose, onChanged }) {
 // ─── ItemCard ─────────────────────────────────────────────────────────────────
 
 const TYPE_ICON_MAP = {
-  video:        "film-outline",
-  pdf:          "document-text-outline",
-  ebook:        "book-outline",
-  text:         "document-text-outline",
-  checklist:    "list-outline",
-  submission:   "cloud-upload-outline",
-  quiz:         "help-circle-outline",
-  milestone:    "trophy-outline",
-  live_session: "radio-outline",
-  external_link:"open-outline",
+  video:         "film-outline",
+  pdf:           "document-text-outline",
+  ebook:         "book-outline",
+  text:          "document-text-outline",
+  checklist:     "list-outline",
+  submission:    "cloud-upload-outline",
+  quiz:          "help-circle-outline",
+  multi_quiz:    "checkbox-outline",
+  single_choice: "radio-button-on-outline",
+  milestone:     "trophy-outline",
+  live_session:  "radio-outline",
+  external_link: "open-outline",
+  form:          "clipboard-outline",
 };
 
 function StatusBadge({ status, type }) {
@@ -706,8 +834,11 @@ function ItemBody({ day, item, progress, done, onChanged }) {
     case "video":        return <VideoItem   day={day} item={item} done={done} onChanged={onChanged} />;
     case "checklist":   return <ChecklistItem day={day} item={item} done={done} onChanged={onChanged} />;
     case "quiz":        return <QuizItem     day={day} item={item} progress={progress} onChanged={onChanged} />;
+    case "multi_quiz":  return <MultiQuizItem day={day} item={item} progress={progress} onChanged={onChanged} />;
+    case "single_choice": return <SingleChoiceItem day={day} item={item} progress={progress} onChanged={onChanged} />;
     case "submission":  return <SubmissionItem day={day} item={item} done={done} onChanged={onChanged} />;
     case "milestone":   return <MilestoneItem  day={day} item={item} progress={progress} onChanged={onChanged} />;
+    case "form":        return <FormItem       day={day} item={item} done={done} onChanged={onChanged} />;
     case "text":
       return (
         <View style={{ marginTop: 10 }}>
@@ -765,9 +896,9 @@ function ItemBody({ day, item, progress, done, onChanged }) {
 
 // ─── MarkDone ─────────────────────────────────────────────────────────────────
 
-async function completeItem(day, item, onChanged, showAlert, label = "Marked complete") {
+async function completeItem(day, item, programId, onChanged, showAlert, label = "Marked complete") {
   try {
-    await challengeApi.completeItem(day, item.id);
+    await challengeApi.completeItem(day, item.id, programId);
     showAlert({ type: "success", title: "Done", message: label });
     onChanged?.();
   } catch (e) {
@@ -777,6 +908,7 @@ async function completeItem(day, item, onChanged, showAlert, label = "Marked com
 
 function MarkDone({ day, item, done, onChanged, disabled, label = "Mark complete" }) {
   const { showAlert } = useAlert();
+  const programId = useContext(ProgramContext);
   if (done) {
     return (
       <View style={[styles.row, { marginTop: 10 }]}>
@@ -787,7 +919,7 @@ function MarkDone({ day, item, done, onChanged, disabled, label = "Mark complete
   }
   return (
     <TouchableOpacity
-      onPress={() => completeItem(day, item, onChanged, showAlert)}
+      onPress={() => completeItem(day, item, programId, onChanged, showAlert)}
       disabled={disabled}
       style={[styles.neonBtn, styles.neonBtnSm, { marginTop: 10, opacity: disabled ? 0.5 : 1 }]}
     >
@@ -798,39 +930,14 @@ function MarkDone({ day, item, done, onChanged, disabled, label = "Mark complete
 }
 
 // ─── VideoItem ────────────────────────────────────────────────────────────────
-
-function youtubeId(url) {
-  if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
-  if (m) return m[1];
-  const v = url.match(/[?&]v=([\w-]{11})/);
-  return v ? v[1] : null;
-}
+// Renders the same secure embed web's VideoItem does (YouTube/Vimeo/Mux + watermark) — see
+// components/challenge/SecureVideoPlayer.js.
 
 function VideoItem({ day, item, done, onChanged }) {
   const url = item.video_url || item.url;
-  const ytId = youtubeId(url);
-  const videoUrl = ytId ? `https://www.youtube.com/watch?v=${ytId}` : url;
-
-  const openVideo = async () => {
-    if (!videoUrl) return;
-    await WebBrowser.openBrowserAsync(videoUrl);
-  };
-
   return (
     <View style={{ marginTop: 10 }}>
-      {url ? (
-        <TouchableOpacity onPress={openVideo} style={styles.videoPlaceholder}>
-          <View style={styles.playCircle}>
-            <Ionicons name="play" size={28} color="#000" />
-          </View>
-          {ytId && (
-            <Text style={styles.videoHint}>YouTube · Tap to open</Text>
-          )}
-        </TouchableOpacity>
-      ) : (
-        <Text style={styles.pendingText}>Video URL pending.</Text>
-      )}
+      <SecureVideoPlayer url={url} day={day} />
       <MarkDone day={day} item={item} done={done} onChanged={onChanged} label="Mark watched" />
     </View>
   );
@@ -876,8 +983,10 @@ function ChecklistItem({ day, item, done, onChanged }) {
 
 function QuizItem({ day, item, progress, onChanged }) {
   const { showAlert } = useAlert();
+  const programId = useContext(ProgramContext);
   const qs = item.questions || [];
   const [answers, setAnswers] = useState(() => qs.map(() => null));
+  const [order] = useState(() => qs.map((q) => shuffleIndices((q.options || []).length)));
   const [busy, setBusy] = useState(false);
   const passed = progress?.status === "completed" || progress?.status === "verified";
 
@@ -897,7 +1006,7 @@ function QuizItem({ day, item, progress, onChanged }) {
     }
     setBusy(true);
     try {
-      const r = await challengeApi.submitQuiz(day, item.id, answers);
+      const r = await challengeApi.submitQuiz(day, item.id, answers, programId);
       if (r.data.passed) {
         showAlert({ type: "success", title: "Passed", message: `All correct! ${r.data.score} pts earned.` });
       } else {
@@ -917,7 +1026,7 @@ function QuizItem({ day, item, progress, onChanged }) {
         <View key={qi}>
           <Text style={styles.quizQuestion}>{qi + 1}. {q.q}</Text>
           <View style={{ gap: 6, marginTop: 6 }}>
-            {(q.options || []).map((opt, oi) => (
+            {(order[qi] || []).map((oi) => (
               <TouchableOpacity
                 key={oi}
                 onPress={() => setAnswers((a) => a.map((v, idx) => idx === qi ? oi : v))}
@@ -929,7 +1038,7 @@ function QuizItem({ day, item, progress, onChanged }) {
                 <View style={[styles.radioOuter, answers[qi] === oi && styles.radioOuterSelected]}>
                   {answers[qi] === oi && <View style={styles.radioInner} />}
                 </View>
-                <Text style={styles.quizOptionText}>{opt}</Text>
+                <Text style={styles.quizOptionText}>{q.options[oi]}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -946,10 +1055,155 @@ function QuizItem({ day, item, progress, onChanged }) {
   );
 }
 
+// ─── MultiQuizItem (select-all-that-apply, graded) ────────────────────────────
+
+function MultiQuizItem({ day, item, progress, onChanged }) {
+  const { showAlert } = useAlert();
+  const programId = useContext(ProgramContext);
+  const qs = item.questions || [];
+  const [answers, setAnswers] = useState(() => qs.map(() => new Set()));
+  const [order] = useState(() => qs.map((q) => shuffleIndices((q.options || []).length)));
+  const [busy, setBusy] = useState(false);
+  const passed = progress?.status === "completed" || progress?.status === "verified";
+
+  const toggleOption = (qi, oi) => setAnswers((a) => a.map((set, idx) => {
+    if (idx !== qi) return set;
+    const next = new Set(set);
+    next.has(oi) ? next.delete(oi) : next.add(oi);
+    return next;
+  }));
+
+  if (passed) {
+    return (
+      <View style={[styles.row, { marginTop: 10 }]}>
+        <Ionicons name="checkmark-circle" size={16} color={PRIMARY} />
+        <Text style={[styles.doneText, { marginLeft: 4 }]}>Answered</Text>
+      </View>
+    );
+  }
+
+  const submit = async () => {
+    if (answers.some((a) => a.size === 0)) {
+      showAlert({ type: "warning", title: "Incomplete", message: "Answer every question first" });
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await challengeApi.submitMultiQuiz(day, item.id, answers.map((set) => [...set]), programId);
+      showAlert({ type: "success", title: "Recorded", message: `${r.data.correct}/${r.data.total} correct.` });
+      onChanged?.();
+    } catch (e) {
+      showAlert({ type: "error", title: "Error", message: e?.response?.data?.detail || "Could not submit" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={{ marginTop: 10, gap: 14 }}>
+      {qs.map((q, qi) => (
+        <View key={qi}>
+          <Text style={styles.quizQuestion}>{qi + 1}. {q.q} <Text style={{ color: "rgba(255,255,255,0.40)", fontSize: 11 }}>(select all that apply)</Text></Text>
+          <View style={{ gap: 6, marginTop: 6 }}>
+            {(order[qi] || []).map((oi) => {
+              const selected = answers[qi].has(oi);
+              return (
+                <TouchableOpacity
+                  key={oi}
+                  onPress={() => toggleOption(qi, oi)}
+                  style={[styles.quizOption, selected && styles.quizOptionSelected]}
+                >
+                  <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
+                    {selected && <Ionicons name="checkmark" size={11} color="#000" />}
+                  </View>
+                  <Text style={styles.quizOptionText}>{q.options[oi]}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+      <TouchableOpacity
+        onPress={submit}
+        disabled={busy}
+        style={[styles.neonBtn, styles.neonBtnSm, { opacity: busy ? 0.6 : 1 }]}
+      >
+        <Text style={styles.neonBtnText}>{busy ? "Checking..." : "Submit Answers"}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── SingleChoiceItem (ungraded — any pick completes it) ──────────────────────
+
+function SingleChoiceItem({ day, item, progress, onChanged }) {
+  const { showAlert } = useAlert();
+  const programId = useContext(ProgramContext);
+  const opts = item.options || [];
+  const [order] = useState(() => shuffleIndices(opts.length));
+  const [selected, setSelected] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const done = progress?.status === "completed" || progress?.status === "verified";
+
+  if (done) {
+    return (
+      <View style={[styles.row, { marginTop: 10 }]}>
+        <Ionicons name="checkmark-circle" size={16} color={PRIMARY} />
+        <Text style={[styles.doneText, { marginLeft: 4 }]}>Done</Text>
+      </View>
+    );
+  }
+
+  const submit = async () => {
+    if (selected === null) {
+      showAlert({ type: "warning", title: "Incomplete", message: "Pick an option first" });
+      return;
+    }
+    setBusy(true);
+    try {
+      await challengeApi.submitSingleChoice(day, item.id, selected, programId);
+      showAlert({ type: "success", title: "Recorded", message: "Answer recorded." });
+      onChanged?.();
+    } catch (e) {
+      showAlert({ type: "error", title: "Error", message: e?.response?.data?.detail || "Could not submit" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={{ marginTop: 10, gap: 10 }}>
+      {!!item.question && <Text style={styles.quizQuestion}>{item.question}</Text>}
+      <View style={{ gap: 6 }}>
+        {order.map((oi) => (
+          <TouchableOpacity
+            key={oi}
+            onPress={() => setSelected(oi)}
+            style={[styles.quizOption, selected === oi && styles.quizOptionSelected]}
+          >
+            <View style={[styles.radioOuter, selected === oi && styles.radioOuterSelected]}>
+              {selected === oi && <View style={styles.radioInner} />}
+            </View>
+            <Text style={styles.quizOptionText}>{opts[oi]}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TouchableOpacity
+        onPress={submit}
+        disabled={busy}
+        style={[styles.neonBtn, styles.neonBtnSm, { opacity: busy ? 0.6 : 1 }]}
+      >
+        <Text style={styles.neonBtnText}>{busy ? "Saving..." : "Submit Answer"}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── SubmissionItem ───────────────────────────────────────────────────────────
 
 function SubmissionItem({ day, item, done, onChanged }) {
   const { showAlert } = useAlert();
+  const programId = useContext(ProgramContext);
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -992,7 +1246,7 @@ function SubmissionItem({ day, item, done, onChanged }) {
     }
     setBusy(true);
     try {
-      await challengeApi.submitText(day, item.id, text, files.map((f) => f.path));
+      await challengeApi.submitText(day, item.id, text, files.map((f) => f.path), programId);
       showAlert({ type: "success", title: "Submitted", message: "Your submission is under review." });
       onChanged?.();
     } catch (e) {
@@ -1043,6 +1297,7 @@ function SubmissionItem({ day, item, done, onChanged }) {
 
 function MilestoneItem({ day, item, progress, onChanged }) {
   const { showAlert } = useAlert();
+  const programId = useContext(ProgramContext);
   const [busy, setBusy] = useState(false);
   const status = progress?.status;
 
@@ -1064,7 +1319,7 @@ function MilestoneItem({ day, item, progress, onChanged }) {
     try {
       const up = await uploadApi.upload(formData);
       const path = up.data.files?.[0]?.path;
-      await challengeApi.submitMilestone(day, item.id, path);
+      await challengeApi.submitMilestone(day, item.id, path, programId);
       showAlert({ type: "success", title: "Submitted", message: "Proof submitted — under review." });
       onChanged?.();
     } catch (err) {
@@ -1112,10 +1367,85 @@ function MilestoneItem({ day, item, progress, onChanged }) {
   );
 }
 
+// ─── FormItem ─────────────────────────────────────────────────────────────────
+// Pins a Forms-module Challenge Form — answers go to forms-service, not here; this item just
+// fires the generic completion call afterward, same as text/pdf/external_link. Matches web
+// Challenge.jsx's FormItem exactly, including reusing the shared visibleQuestions/
+// pruneHiddenAnswers branching logic and QuestionInput renderer (PushFormModal.js) rather than
+// a parallel implementation.
+
+function FormItem({ day, item, done, onChanged }) {
+  const { showAlert } = useAlert();
+  const programId = useContext(ProgramContext);
+  const [form, setForm] = useState(undefined); // undefined = loading, null = failed
+  const [values, setValues] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (done || !item.form_id) return;
+    formsApi.get(item.form_id).then((r) => setForm(r.data)).catch(() => setForm(null));
+  }, [item.form_id, done]);
+
+  if (done) {
+    return (
+      <View style={[styles.row, { marginTop: 10 }]}>
+        <Ionicons name="checkmark-circle" size={16} color={PRIMARY} />
+        <Text style={[styles.doneText, { marginLeft: 4 }]}>Complete</Text>
+      </View>
+    );
+  }
+  if (!item.form_id) return <Text style={styles.pendingText}>Form pending.</Text>;
+  if (form === undefined) return <Text style={styles.pendingText}>Loading form…</Text>;
+  if (form === null) return <Text style={styles.pendingText}>This form isn't available right now.</Text>;
+
+  const shown = visibleQuestions(form.questions, values);
+
+  const submit = async () => {
+    for (const q of shown) {
+      if (q.required && !values[q.id]) {
+        showAlert({ type: "warning", title: "Required", message: `${q.label || "This question"} is required` });
+        return;
+      }
+    }
+    setSubmitting(true);
+    try {
+      await formsApi.respond(item.form_id, pruneHiddenAnswers(form.questions, values));
+      await completeItem(day, item, programId, onChanged, "Form submitted");
+    } catch (e) {
+      showAlert({ type: "error", title: "Error", message: e?.response?.data?.detail || "Could not submit" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <View style={{ marginTop: 10, gap: 12 }}>
+      {shown.map((q) => (
+        <View key={q.id}>
+          <Text style={styles.quizQuestion}>
+            {q.label}{q.required ? <Text style={{ color: PRIMARY }}> *</Text> : null}
+          </Text>
+          <View style={{ marginTop: 8 }}>
+            <QuestionInput q={q} value={values[q.id]} onChange={(v) => setValues((x) => ({ ...x, [q.id]: v }))} />
+          </View>
+        </View>
+      ))}
+      <TouchableOpacity
+        onPress={submit}
+        disabled={submitting}
+        style={[styles.neonBtn, styles.neonBtnSm, { opacity: submitting ? 0.6 : 1 }]}
+      >
+        <Text style={styles.neonBtnText}>{submitting ? "Submitting..." : "Submit"}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── DoubtBox ─────────────────────────────────────────────────────────────────
 
 function DoubtBox({ day }) {
   const { showAlert } = useAlert();
+  const programId = useContext(ProgramContext);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1129,7 +1459,7 @@ function DoubtBox({ day }) {
     setBusy(true);
     setReply(null);
     try {
-      const r = await challengeApi.askDoubt(day, q);
+      const r = await challengeApi.askDoubt(day, q, programId);
       if (r.data.resolved) {
         setReply({ resolved: true, answer: r.data.answer, video_url: r.data.video_url });
       } else {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import ScreenLayout from "../components/common/ScreenLayout";
 import { journalApi } from "../src/api/journal";
 import { tokenService } from "../src/services/tokenService";
 import { useAlert } from "../src/context/AlertContext";
+import { useAuth } from "../src/hooks/useAuth";
 import { formatDate, formatMoney, moneyColor } from "../src/utils/format";
 import WithdrawalsCard from "../components/journal/WithdrawalsCard";
 import AutoJournalCard from "../components/journal/AutoJournalCard";
@@ -29,7 +30,7 @@ const PRIMARY = "#39FF14";
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const GLASS_BG = "rgba(255,255,255,0.03)";
 const GLASS_BORDER = "rgba(255,255,255,0.08)";
-const GLASS_STRONG_BG = "rgba(10,10,10,0.9)";
+const GLASS_STRONG_BG = "rgba(10,10,10,0.8)";
 const GLASS_STRONG_BORDER = "rgba(255,255,255,0.1)";
 const AMBER = "#FBBF24";
 const RED = "#f87171";
@@ -160,7 +161,7 @@ function TradeCard({ entry, onPress, onDelete }) {
       ) : null}
 
       {/* Trade name */}
-      <Text style={s.tradeName} numberOfLines={1}>{entry.trade_name || "Untitled Trade"}</Text>
+      <Text style={s.tradeName} numberOfLines={1}>{entry.trade_name}</Text>
 
       {/* Date */}
       {entry.date ? (
@@ -213,6 +214,22 @@ function TradeCard({ entry, onPress, onDelete }) {
 export default function JournalScreen({ navigation }) {
   const qc = useQueryClient();
   const { showAlert, showConfirm } = useAlert();
+  const { user } = useAuth();
+
+  // Trading journal is a paid-challenge feature (backend's CurrentUser.requireChallengeUnlocked
+  // is the real enforcement) — mirrors web's ProtectedRoute requireChallengeUnlocked exactly
+  // (App.jsx's /dashboard/auto-journal route), including the same accessLapsed check so an
+  // expired/blocked grant is treated the same as never having unlocked it. Redirects to Overview,
+  // same as web's <Navigate to="/dashboard" replace/>, rather than rendering a locked-state UI —
+  // web has no such screen here either.
+  const accessLapsed = user?.access_status === "expired" || user?.access_status === "blocked";
+  const canAccessJournal = (!!user?.challenge_unlocked && !accessLapsed) || !!user?.is_admin || !!user?.is_staff;
+  useEffect(() => {
+    if (!canAccessJournal) {
+      navigation.navigate("OverviewScreen");
+    }
+  }, [canAccessJournal, navigation]);
+  if (!canAccessJournal) return null;
 
   const [q, setQ] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -591,7 +608,7 @@ export default function JournalScreen({ navigation }) {
               >
                 <Ionicons name="download-outline" size={12} color="#000" style={{ marginRight: 5 }} />
                 <Text style={s.reportBtnText}>
-                  {reportBusy ? `${reportBusy.toUpperCase()}…` : "Get Report"}
+                  {reportBusy ? `Building ${reportBusy.toUpperCase()}…` : "Get Report"}
                 </Text>
                 {!reportBusy ? (
                   <Ionicons
@@ -623,7 +640,7 @@ export default function JournalScreen({ navigation }) {
                 {filtersActive ? (
                   <View style={s.reportMenuFooter}>
                     <Text style={s.reportMenuFooterText}>
-                      Filters applied · {view.length} trade{view.length === 1 ? "" : "s"}
+                      Filters applied · {view.length} trades
                     </Text>
                   </View>
                 ) : null}

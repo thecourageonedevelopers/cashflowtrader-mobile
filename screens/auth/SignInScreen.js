@@ -113,7 +113,10 @@ export default function SignInScreen({ navigation }) {
                 onRightPress={() => setShowPassword(!showPassword)}
               />
 
-              <TouchableOpacity style={styles.forgotWrap}>
+              <TouchableOpacity
+                style={styles.forgotWrap}
+                onPress={() => navigation.navigate("ForgotPassword", { emailPrefill: email })}
+              >
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
 
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
 
   // Card — glass-strong
   card: {
-    backgroundColor: "rgba(10,10,10,0.9)",
+    backgroundColor: "rgba(10,10,10,0.8)",
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",

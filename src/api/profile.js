@@ -18,6 +18,29 @@ export const profileApi = {
       new_password: newPassword,
     }),
 
+  // OTP-secured "create password" flow for social-only accounts (has_password === false) —
+  // mirrors web PasswordFlowModal.jsx mode="create" exactly. No current password needed since
+  // none exists yet; web auto-fires the start call on mount (needs:"none"), req body is empty.
+  createPasswordStart: () => client.post("/profile/password/create/start", {}),
+
+  createPasswordVerify: (code, newPassword) =>
+    client.post("/profile/password/create/verify", {
+      code,
+      new_password: newPassword,
+    }),
+
+  // OTP-gated change flow for protected identity fields — mirrors web ChangeContactModal.jsx
+  // exactly. Mobile change: email OTP -> new-phone OTP. Email change: mobile OTP -> new-email OTP.
+  // Both steps of both flows are actually emailed (no SMS provider configured) per web's own
+  // documented comment — copy on the mobile screen mirrors that same caveat.
+  changeMobileStart: (newValue) => client.post("/profile/change-mobile/start", { new_value: newValue }),
+  changeMobileVerifyEmail: (code) => client.post("/profile/change-mobile/verify-email", { code }),
+  changeMobileVerifyPhone: (code) => client.post("/profile/change-mobile/verify-phone", { code }),
+
+  changeEmailStart: (newValue) => client.post("/profile/change-email/start", { new_value: newValue }),
+  changeEmailVerifyMobile: (code) => client.post("/profile/change-email/verify-mobile", { code }),
+  changeEmailVerifyEmail: (code) => client.post("/profile/change-email/verify-email", { code }),
+
   getGoalProgress: () => client.get("/profile/goal-progress"),
 
   archetypes: () => client.get("/transformation/archetypes"),
