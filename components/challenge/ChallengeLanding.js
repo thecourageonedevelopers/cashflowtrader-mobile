@@ -10,13 +10,13 @@ import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useAlert } from "../../src/context/AlertContext";
 import { challengeApi } from "../../src/api/challenge";
+import {
+  VSL_VIDEO_URL, VSL_BASE_URL, muxPlaybackId, buildVslHtml, parseVslMessage, vslErrorMessage,
+} from "../../src/utils/vsl";
 
 // Web equivalent: ChallengeLanding.jsx
 // Rendered by ChallengeScreen when data.unlocked === false.
 
-// Same Vimeo embed web's VslContent.jsx/ChallengeLanding.jsx hardcode — "Paste your real VSL link
-// here (YouTube/Vimeo embed URL or an .mp4)." Kept in sync manually with that source of truth.
-const VSL_VIDEO_URL = "https://player.vimeo.com/video/1207635619?title=0&byline=0&portrait=0&dnt=1&muted=0";
 const VSL_POSTER = require("../../assets/vsl-poster.png");
 
 const BENEFITS = [
@@ -26,36 +26,57 @@ const BENEFITS = [
   { icon: "aperture-outline",         a: "Proven Daily",  b: "Process"   },
 ];
 
-// Same-technology WebView embed as SecureVideoPlayer, without the lesson-video watermark/Mux
-// path — the VSL is public marketing content, not paid lesson content, matching web's plain
-// VideoModal/inline iframe with no watermark.
+// VSL player — the portal plays this video with <mux-player playback-id="..."> (VslContent.jsx). RN cannot
+// host an iframe/custom element natively, so the same Mux player runs inside a WebView (the technique
+// SecureVideoPlayer.js uses for lesson videos). Mux's player provides play/pause, 10 s seek buttons,
+// progress bar with time/duration, buffering state and fullscreen; this wrapper adds the loading /
+// error / retry states and the close control. The previous Vimeo URL was a different video than the
+// portal's and never started.
 function VslPlayer({ onClose }) {
+  const playbackId = useMemo(() => muxPlaybackId(VSL_VIDEO_URL), []);
+  const html = useMemo(() => (playbackId ? buildVslHtml(playbackId) : null), [playbackId]);
   const [loading, setLoading] = useState(true);
-  const [errored, setErrored] = useState(false);
-  const html = useMemo(() => `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <style>html,body{margin:0;padding:0;background:#000;width:100%;height:100%;overflow:hidden}</style></head>
-    <body><iframe src="${VSL_VIDEO_URL}${VSL_VIDEO_URL.includes("?") ? "&" : "?"}autoplay=1" style="width:100%;height:100%;border:0"
-      allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe></body></html>`, []);
+  const [error, setError] = useState(playbackId ? null : "The video isn't available right now.");
+  const [attempt, setAttempt] = useState(0);
+
+  const retry = () => { setError(null); setLoading(true); setAttempt((n) => n + 1); };
+  const onMessage = (e) => {
+    const m = parseVslMessage(e.nativeEvent.data);
+    if (!m) return;
+    if (m.type === "ready") { setLoading(false); setError(null); }
+    else { setLoading(false); setError(vslErrorMessage(m.reason)); }
+  };
 
   return (
     <View style={styles.vslPlayerWrap}>
-      <WebView
-        source={{ html }}
-        style={styles.vslWebview}
-        allowsInlineMediaPlayback
-        mediaPlaybackRequiresUserAction={false}
-        onLoadEnd={() => setLoading(false)}
-        onError={() => { setErrored(true); setLoading(false); }}
-      />
-      {loading && !errored && (
-        <View style={styles.vslOverlay}>
+      {html && !error && (
+        <WebView
+          key={attempt}
+          source={{ html, baseUrl: VSL_BASE_URL }}
+          style={styles.vslWebview}
+          originWhitelist={["*"]}
+          javaScriptEnabled
+          domStorageEnabled
+          allowsInlineMediaPlayback
+          allowsFullscreenVideo
+          mediaPlaybackRequiresUserAction={false}
+          onMessage={onMessage}
+          onError={() => { setLoading(false); setError(vslErrorMessage("script")); }}
+          onHttpError={() => { setLoading(false); setError(vslErrorMessage("script")); }}
+        />
+      )}
+      {loading && !error && (
+        <View style={[styles.vslOverlay, { pointerEvents: "none" }]}>
           <ActivityIndicator size="large" color={PRIMARY} />
         </View>
       )}
-      {errored && (
+      {!!error && (
         <View style={styles.vslOverlay}>
           <Ionicons name="alert-circle-outline" size={26} color="rgba(255,255,255,0.6)" />
-          <Text style={styles.vslErrorText}>Couldn't load the video.</Text>
+          <Text style={styles.vslErrorText}>{error}</Text>
+          <TouchableOpacity onPress={retry} style={styles.vslRetryBtn}>
+            <Text style={styles.vslRetryText}>Try again</Text>
+          </TouchableOpacity>
         </View>
       )}
       <TouchableOpacity onPress={onClose} style={styles.vslCloseBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -65,10 +86,52 @@ function VslPlayer({ onClose }) {
   );
 }
 
+// The poster is drawn at an EXPLICIT pixel size computed from the measured box (contain-fit by hand,
+// centred) instead of relying on flex/absolute-fill sizing + resizeMode. The installed APK showed the
+// bundled 1536x1024 PNG at roughly 3x scale cropped to a corner; giving the native Image exact
+// dimensions (and resizeMethod="resize" so Android decodes it at that size) removes any dependence on
+// density-bucket scaling of the bundled drawable.
+const POSTER_SRC = Image.resolveAssetSource(VSL_POSTER);
+const POSTER_RATIO = POSTER_SRC?.width && POSTER_SRC?.height ? POSTER_SRC.width / POSTER_SRC.height : 3 / 2;
+
+function VslPoster({ onPress }) {
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  let img = null;
+  if (box.w > 0 && box.h > 0) {
+    const boxRatio = box.w / box.h;
+    const w = boxRatio > POSTER_RATIO ? box.h * POSTER_RATIO : box.w;
+    const h = boxRatio > POSTER_RATIO ? box.h : box.w / POSTER_RATIO;
+    img = { width: w, height: h, left: (box.w - w) / 2, top: (box.h - h) / 2 };
+  }
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={styles.vslThumb}
+      activeOpacity={0.9}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setBox((b) => (b.w === width && b.h === height ? b : { w: width, h: height }));
+      }}
+    >
+      {img && (
+        <Image
+          source={VSL_POSTER}
+          style={[styles.vslPosterImg, img]}
+          resizeMode="contain"
+          resizeMethod="resize"
+        />
+      )}
+    </TouchableOpacity>
+  );
+}
+
 export default function ChallengeLanding({ data, onPurchased }) {
   const { user, checkAuth } = useAuth();
   const { showAlert } = useAlert();
   const [busy, setBusy] = useState(false);
+  // Synchronous re-entry guard: state updates are async, so two quick taps could both pass `disabled={busy}`
+  // and create two Razorpay orders.
+  const inFlight = useRef(false);
   const [playingVsl, setPlayingVsl] = useState(false);
 
   // Price + coupon — mirrors web Checkout.jsx's checkout-card exactly. Web's own already-purchased
@@ -127,6 +190,8 @@ export default function ChallengeLanding({ data, onPurchased }) {
 
   // Payment / unlock — mirrors web Challenge.jsx handleBuy with react-native-razorpay
   const handleUnlock = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     try {
       const order = await challengeApi.createOrder(appliedCoupon?.code).then((r) => r.data);
@@ -203,6 +268,7 @@ export default function ChallengeLanding({ data, onPurchased }) {
         message: e?.response?.data?.detail || e?.description || "Could not start payment",
       });
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -246,18 +312,10 @@ export default function ChallengeLanding({ data, onPurchased }) {
         ))}
       </View>
 
-      {/* VSL thumbnail — aspect-video, neon-border, real poster image, tap → watchVsl */}
-      <TouchableOpacity
-        onPress={watchVsl}
-        style={styles.vslThumb}
-        activeOpacity={0.9}
-      >
-        <Image source={VSL_POSTER} style={styles.vslPosterImg} resizeMode="cover" />
-        <View style={styles.vslPosterScrim} />
-        <View style={styles.playCircle}>
-          <Ionicons name="play" size={32} color="#000" style={{ marginLeft: 3 }} />
-        </View>
-      </TouchableOpacity>
+      {/* VSL thumbnail — portal ChallengeLanding.jsx: aspect-video box, neon border, black bg, poster
+          object-contain object-center, gradient scrim; the play ring is part of the poster artwork
+          itself, so no extra play button is drawn on top. Tap → watchVsl. */}
+      <VslPoster onPress={watchVsl} />
 
       <Modal visible={playingVsl} animationType="fade" onRequestClose={() => setPlayingVsl(false)} supportedOrientations={["portrait", "landscape"]}>
         <VslPlayer onClose={() => setPlayingVsl(false)} />
@@ -357,7 +415,7 @@ export default function ChallengeLanding({ data, onPurchased }) {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: "#050505" },
+  scroll: { flex: 1, backgroundColor: "#000000" },
   content: {
     paddingHorizontal: 20,
     paddingTop: 12,
@@ -453,15 +511,18 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
 
-  // VSL thumbnail — web: mt-7=28px above, aspect-video rounded-2xl; mt-6=24px below
+  // VSL thumbnail — web: mt-7=28px above, rounded-2xl; mt-6=24px below.
+  // aspectRatio is the poster's own (assets/vsl-poster.png is 1536x1024 = 3:2) so resizeMode="contain"
+  // shows the WHOLE image with no crop and no letterbox bars. The old 16:9 box + "cover" cut ~16% off
+  // the top/bottom. Keep this in step with the image if the poster file is ever replaced.
   vslThumb: {
     width: "100%",
-    aspectRatio: 16 / 9,
+    aspectRatio: 16 / 9, // portal: aspect-video
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.50)",
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
@@ -470,20 +531,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 20,
   },
-  playCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#39FF14",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   vslPosterImg: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  vslPosterScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    position: "absolute",
   },
 
   // Fullscreen VSL player modal
@@ -496,7 +545,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  vslErrorText: { color: "rgba(255,255,255,0.6)", fontFamily: BODY.regular, fontSize: 13 },
+  vslErrorText: { color: "rgba(255,255,255,0.6)", fontFamily: BODY.regular, fontSize: 13, textAlign: "center", paddingHorizontal: 32 },
+  vslRetryBtn: { marginTop: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: "rgba(57,255,20,0.6)" },
+  vslRetryText: { color: PRIMARY, fontFamily: DISPLAY.bold, fontSize: 14 },
   vslCloseBtn: {
     position: "absolute",
     top: 44,

@@ -1,18 +1,18 @@
 export const COLORS = {
   // Backgrounds
-  background: "#050505",
+  background: "#000000",
   surface: "#0a0a0a",
   surfaceElevated: "#111111",
   inputBg: "#080808",
 
   // Borders
-  border: "#1b1b1b",
+  border: "rgba(255,255,255,0.1)",
   inputBorder: "#222222",
   divider: "#1c1c1c",
 
   // Brand
-  primary: "#22c55e",
-  primaryDim: "#16a34a",
+  primary: "#39FF14",
+  primaryDim: "#2bd10f",
   neon: "#39FF14",
 
   // Text

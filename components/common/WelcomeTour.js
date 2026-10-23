@@ -53,8 +53,10 @@ const STEPS = [
 ];
 
 export default function WelcomeTour({ visible }) {
-  const { user, setUser } = useAuth();
+  const { setUser } = useAuth();
   const [open, setOpen] = useState(false);
+  // Blocks double taps / Android back + Skip racing each other: finish() must run once per showing.
+  const finishing = useRef(false);
   const [stepIdx, setStepIdx] = useState(0);
 
   // Slide-in animation — mirrors web AnimatePresence x: 14 → 0 on each step
@@ -63,6 +65,7 @@ export default function WelcomeTour({ visible }) {
 
   useEffect(() => {
     if (visible) {
+      finishing.current = false;
       setOpen(true);
       setStepIdx(0);
       slideX.setValue(0);
@@ -84,14 +87,20 @@ export default function WelcomeTour({ visible }) {
   };
 
   // Mirror web finish(): close first (instant feedback), then API + setUser
+  // setUser MERGES (see AuthContext/mergeUser), and the endpoint only answers { ok, tour_completed } —
+  // so only the one field is applied. Replacing the whole user with that payload is what used to drop
+  // `onboarded` and bounce users back into the onboarding questions.
   const finish = async () => {
+    if (finishing.current) return;
+    finishing.current = true;
     setOpen(false);
     try {
-      const { data } = await profileApi.tourComplete();
-      setUser?.(data);
+      await profileApi.tourComplete();
+      setUser?.({ tour_completed: true });
     } catch {
-      // Local fallback so tour doesn't reopen this session
-      setUser?.({ ...user, tour_completed: true });
+      // Local fallback so the tour doesn't reopen this session; the backend flag is retried next time
+      // (it stays false server-side, so the portal behaves the same).
+      setUser?.({ tour_completed: true });
     }
   };
 

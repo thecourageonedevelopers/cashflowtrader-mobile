@@ -1,6 +1,7 @@
 import axios from "axios";
 import { tokenService } from "../services/tokenService";
 import { decryptResponseData } from "../utils/responseCrypto";
+import { isAuthAttemptUrl } from "../utils/authSession";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 

@@ -14,9 +14,9 @@ export default {
     scheme: "cashflowtrader",
 
     splash: {
-      image: "./assets/splash-icon.png",
+      image: "./assets/splash-logo.png", // padded copy of the neon shield (Android 12 masks the splash icon to a circle)
       resizeMode: "contain",
-      backgroundColor: "#050505",
+      backgroundColor: "#000000",
     },
 
     ios: {
@@ -26,8 +26,8 @@ export default {
 
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff",
+        foregroundImage: "./assets/adaptive-icon-foreground.png", // 1024px, shield inside the 66dp safe zone
+        backgroundColor: "#000000",
       },
       edgeToEdgeEnabled: true,
       package: "com.cashflowuniversity.cashflowtrader",
@@ -42,6 +42,15 @@ export default {
               pathPrefix: "/callback",
             },
           ],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
+        // Google sign-in (expo-auth-session) redirects an Android OAuth client to
+        // "<applicationId>:/oauthredirect". Expo only registers app.config `scheme`, never the package
+        // name, so without this the Custom Tab cannot hand control back to the app and the sign-in
+        // resolves as dismissed. Scheme-only filter: Google's URI has no host.
+        {
+          action: "VIEW",
+          data: [{ scheme: "com.cashflowuniversity.cashflowtrader" }],
           category: ["BROWSABLE", "DEFAULT"],
         },
       ],
@@ -72,7 +81,10 @@ export default {
         "expo-build-properties",
         {
           android: {
-            usesCleartextTraffic: true,
+            // Cleartext (plain http) is only for local/LAN development against a http:// backend. The
+            // production store build talks to https://api.cashflowtrader.in only, so it must not allow
+            // cleartext traffic. EAS sets EAS_BUILD_PROFILE for every cloud build.
+            usesCleartextTraffic: process.env.EAS_BUILD_PROFILE !== "production",
           },
         },
       ],

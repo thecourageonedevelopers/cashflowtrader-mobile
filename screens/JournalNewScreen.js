@@ -452,7 +452,7 @@ export default function JournalNewScreen({ navigation }) {
 // Styles
 // ─────────────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#050505" },
+  root: { flex: 1, backgroundColor: "#000000" },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 12 },
 

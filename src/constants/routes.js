@@ -19,16 +19,17 @@ export const APP_ROUTES = {
   CHART_ANALYZE: "ChartAnalyze",
   CREATE_PASSWORD: "CreatePassword",
   CHANGE_CONTACT: "ChangeContact",
+  WEBINAR_DETAIL: "WebinarDetail",
 };
 
 // Bottom tab screen names (match existing AppTabs.js)
 export const TAB_ROUTES = {
   OVERVIEW: "OverviewScreen",
   CHALLENGE: "ChallengeScreen",
-  COMMUNITY: "CommunityScreen",
   MARKET: "MarketScreen",
   JOURNAL: "JournalScreen",
   SESSIONS: "SessionsScreen",
+  WEBINARS: "WebinarsScreen",
   PROGRESS: "ProgressScreen",
   SUPPORT: "SupportScreen",
   PROFILE: "ProfileScreen",

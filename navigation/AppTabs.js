@@ -6,6 +6,7 @@ import ChallengeScreen     from "../screens/ChallengeScreen";
 import MarketScreen        from "../screens/MarketScreen";
 import JournalScreen       from "../screens/JournalScreen";
 import SessionsScreen      from "../screens/SessionsScreen";
+import WebinarsScreen      from "../screens/WebinarsScreen";
 import ProgressScreen      from "../screens/ProgressScreen";
 import SupportScreen       from "../screens/SupportScreen";
 import ProfileScreen       from "../screens/ProfileScreen";
@@ -29,6 +30,7 @@ export default function AppTabs() {
       <Tab.Screen name={TAB_ROUTES.MARKET}    component={MarketScreen}   />
       <Tab.Screen name={TAB_ROUTES.JOURNAL}   component={JournalScreen}   />
       <Tab.Screen name={TAB_ROUTES.SESSIONS}  component={SessionsScreen}  />
+      <Tab.Screen name={TAB_ROUTES.WEBINARS}  component={WebinarsScreen}  />
       <Tab.Screen name={TAB_ROUTES.PROGRESS}  component={ProgressScreen}  />
       <Tab.Screen name={TAB_ROUTES.SUPPORT}   component={SupportScreen}   />
       <Tab.Screen name={TAB_ROUTES.PROFILE}   component={ProfileScreen}   />

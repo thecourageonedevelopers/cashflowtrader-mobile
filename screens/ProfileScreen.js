@@ -16,6 +16,8 @@ import {
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Defs, RadialGradient, Stop, Rect } from "react-native-svg";
 import { useQuery } from "@tanstack/react-query";
 
 import ScreenLayout from "../components/common/ScreenLayout";
@@ -242,7 +244,10 @@ export default function ProfileScreen({ navigation }) {
   });
 
   // ── Avatar URL (resolves picture → displayable URL with auth header) ────────
-  const avatarUrl = useAvatarUrl(profile?.picture ?? user?.picture);
+  // AuthContext's user is the source of truth and is updated the instant an upload succeeds; the
+  // cached /profile query can lag behind it. Preferring `profile.picture` (the old order) kept showing
+  // the previous image until the query happened to refetch.
+  const avatarUrl = useAvatarUrl(user?.picture ?? profile?.picture);
 
   // ── Hydrate form from profile ──────────────────────────────────────────────
   useEffect(() => {
@@ -393,17 +398,30 @@ export default function ProfileScreen({ navigation }) {
           {/* ───── Identity / Hero ───── */}
           <View style={[styles.card, styles.heroCard]}>
             {/* Green glow orb — matches web absolute -top-24 -right-24 blob */}
-            <View style={styles.heroGlow} pointerEvents="none" />
+            <Svg style={styles.heroGlow} pointerEvents="none" width={288} height={288}>
+              <Defs>
+                <RadialGradient id="heroGlowGrad" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0" stopColor="#39FF14" stopOpacity="0.10" />
+                  <Stop offset="1" stopColor="#39FF14" stopOpacity="0" />
+                </RadialGradient>
+              </Defs>
+              <Rect x="0" y="0" width="288" height="288" fill="url(#heroGlowGrad)" />
+            </Svg>
 
-            <View style={styles.identityRow}>
+            <View style={[styles.identityRow, width < 640 && styles.identityRowStacked]}>
               {/* Avatar with camera button overlay */}
               <View style={styles.avatarWrap}>
                 {avatarUrl ? (
                   <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
                 ) : (
-                  <View style={styles.avatar}>
+                  <LinearGradient
+                    colors={[PRIMARY, "#127a0a"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.avatar}
+                  >
                     <Text style={styles.avatarInitial}>{avatarInitial}</Text>
-                  </View>
+                  </LinearGradient>
                 )}
                 <TouchableOpacity
                   style={styles.cameraBtn}
@@ -417,8 +435,8 @@ export default function ProfileScreen({ navigation }) {
               {/* Chip + heading + sub */}
               <View style={styles.identityInfo}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="person-outline" size={11} color="rgba(57,255,20,0.8)" />
-                  <Text style={styles.sectionHeaderText}>My Profile</Text>
+                  <Ionicons name="person-outline" size={12} color={PRIMARY} />
+                  <Text style={[styles.sectionHeaderText, styles.heroChipText]}>My Profile</Text>
                 </View>
                 <Text style={styles.heroHeading}>
                   Edit your{" "}
@@ -907,13 +925,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
 
+  // Portal: "glass-strong p-5 sm:p-6 relative overflow-hidden" — the same neutral border as every other
+  // card (rgba(255,255,255,0.1)) and no outer glow; only the blurred orb tints the corner.
   heroCard: {
-    borderColor: "rgba(57,255,20,0.18)",
-    shadowColor: PRIMARY,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 4,
     overflow: "hidden",
   },
 
@@ -922,14 +936,18 @@ const styles = StyleSheet.create({
   },
 
   // ── Hero glow orb — matches web absolute -top-24 -right-24 blur-3xl ────
+  // w-72 h-72 (288) at -top-24 -right-24 (-96), bg-[#39FF14]/10 blur-3xl → soft radial fade.
   heroGlow: {
     position: "absolute",
-    top: -60,
-    right: -60,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "rgba(57,255,20,0.10)",
+    top: -96,
+    right: -96,
+    width: 288,
+    height: 288,
+  },
+  // .chip text is full neon with 0.15em tracking (11px → 1.65)
+  heroChipText: {
+    color: PRIMARY,
+    letterSpacing: 1.65,
   },
 
   // ── Section header chip ──────────────────────────────────────────────────
@@ -955,10 +973,15 @@ const styles = StyleSheet.create({
   },
 
   // ── Identity / Hero ──────────────────────────────────────────────────────
+  // Portal: "flex flex-col sm:flex-row gap-5" — stacked below 640 px, side by side above.
   identityRow: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 20,
+  },
+  identityRowStacked: {
+    flexDirection: "column",
     alignItems: "flex-start",
-    gap: 16,
   },
 
   avatarWrap: {
@@ -973,7 +996,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: PRIMARY,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: PRIMARY,
@@ -1004,11 +1026,11 @@ const styles = StyleSheet.create({
   // Camera button — matches web absolute -bottom-1 -right-1 w-8 h-8
   cameraBtn: {
     position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    bottom: -4,
+    right: -4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#000",
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.5)",
@@ -1021,23 +1043,29 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
+  // text-3xl font-black tracking-tighter (30px, -0.05em)
   heroHeading: {
     color: TEXT_COLOR,
-    fontSize: 26,
+    fontSize: 30,
     fontFamily: DISPLAY.extraBold,
-    letterSpacing: -0.5,
-    lineHeight: 32,
+    letterSpacing: -1.5,
+    lineHeight: 36,
   },
 
+  // .neon-text: neon colour + 0 0 12px glow
   heroHeadingAccent: {
     color: PRIMARY,
+    textShadowColor: "rgba(57,255,20,0.35)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
   },
 
+  // text-white/55 font-body text-sm (14px)
   identityHint: {
     color: "rgba(255,255,255,0.55)",
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: BODY.regular,
-    lineHeight: 18,
+    lineHeight: 20,
   },
 
   // ── Goal Progress header ─────────────────────────────────────────────────

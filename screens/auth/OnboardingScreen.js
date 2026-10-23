@@ -24,7 +24,7 @@ import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const NEON = "#39FF14";
-const BG = "#050505";
+const BG = "#000000";
 const SURFACE = "#0a0a0a";
 const BORDER = "rgba(255,255,255,0.10)";
 
@@ -175,7 +175,7 @@ function detectTimezone() {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function OnboardingScreen() {
   const { showAlert } = useAlert();
-  const { user, checkAuth } = useAuth();
+  const { user, checkAuth, setUser } = useAuth();
 
   const [started, setStarted] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -297,6 +297,7 @@ export default function OnboardingScreen() {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const goNext = async () => {
+    if (busy) return; // keyboard "submit" bypasses the disabled button — never double-submit
     if (!canAdvance) {
       if (step.type === "mobile") setMobileErr("Please enter a valid mobile number.");
       if (step.key === "full_name") setNameErr("Please enter your name (letters only).");
@@ -335,8 +336,12 @@ export default function OnboardingScreen() {
         answers: customAnswers,
       });
 
-      // checkAuth() flips isOnboarded → RootNavigator auto-switches to AppStack
-      await checkAuth();
+      // The POST above succeeded, so the backend has recorded onboarding. Refresh the authoritative
+      // profile; if that refresh itself fails (flaky network) the submit's success is still the
+      // confirmation, so mark the user onboarded locally rather than leaving them stuck here.
+      // RootNavigator switches to AppStack as soon as user.onboarded is true.
+      const refreshed = await checkAuth();
+      if (!refreshed || refreshed.onboarded !== true) setUser?.({ onboarded: true });
     } catch (e) {
       showAlert({ type: "error", title: "Couldn't save", message: extractApiError(e) });
       setBusy(false);

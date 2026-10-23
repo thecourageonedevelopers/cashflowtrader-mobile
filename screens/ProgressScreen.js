@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#050505",
+    backgroundColor: "#000000",
   },
 
   errorText: {
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: "#050505",
+    backgroundColor: "#000000",
   },
 
   contentContainer: {

@@ -780,7 +780,7 @@ export default function OneClickAnalysisScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#000000" }} edges={["top"]}>
       <View style={ws.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="arrow-back" size={22} color="#fff" />

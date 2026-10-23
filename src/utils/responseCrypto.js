@@ -120,15 +120,27 @@ export async function decryptEnvelope(base64) {
   return JSON.parse(utf8BytesToString(plainBytes));
 }
 
+// Raised when the gateway sent an encrypted envelope this app cannot decrypt (wrong / malformed
+// EXPO_PUBLIC_RESPONSE_ENCRYPTION_KEY, or a corrupted body). Callers must never treat the still-encrypted
+// envelope as a real response — doing so would look like a successful login with no token/user.
+export class ResponseDecryptionError extends Error {
+  constructor() {
+    super("Could not read the server response. The app's secure-connection configuration does not match the server.");
+    this.name = "ResponseDecryptionError";
+    this.code = "RESPONSE_DECRYPTION_FAILED";
+  }
+}
+
 // Transparently swaps the encrypted envelope back for the real JSON object. Anything that isn't
 // the {"__enc": "..."} shape passes through unchanged, mirroring web's decryptResponseData.
+// Unlike web (which logs and returns the envelope), an envelope that cannot be decrypted throws.
 export async function decryptResponseData(data) {
   if (data && typeof data === "object" && typeof data.__enc === "string") {
     try {
       return await decryptEnvelope(data.__enc);
     } catch (e) {
       console.error("Response decryption failed:", e?.message || e);
-      return data;
+      throw new ResponseDecryptionError();
     }
   }
   return data;

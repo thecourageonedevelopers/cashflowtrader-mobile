@@ -11,7 +11,7 @@
  *
  * On success: setUser(data) immediately updates AuthContext (same as web).
  */
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import {
   ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 
 import { profileApi } from "../../src/api/profile";
@@ -57,6 +58,20 @@ const PRESET_AVATARS = [
 export default function AvatarStudio({ visible, onClose }) {
   const { setUser } = useAuth();
   const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  // Synchronous guard against repeated taps while an upload/save is in flight.
+  const inFlight = useRef(false);
+
+  // Applies a successful avatar response everywhere the picture is read from: AuthContext (merged, so
+  // the rest of the user object is untouched) and the cached /profile query that ProfileScreen uses.
+  // The backend returns a new URL for every upload (?v=<millis>), so image caches are bypassed.
+  const applyPicture = (data) => {
+    const picture = data?.picture;
+    if (typeof picture !== "string" || !picture) return;
+    setUser?.({ picture });
+    queryClient.setQueryData(["profile"], (old) => (old ? { ...old, picture } : old));
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+  };
 
   const [tab, setTab] = useState("upload");
   const [busy, setBusy] = useState(false);
@@ -72,6 +87,16 @@ export default function AvatarStudio({ visible, onClose }) {
 
   // ── Upload tab — pick from library, native crop, POST multipart ──────────
   const pickAndUpload = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      await pickAndUploadInner();
+    } finally {
+      inFlight.current = false;
+    }
+  };
+
+  const pickAndUploadInner = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       showAlert({
@@ -101,7 +126,8 @@ export default function AvatarStudio({ visible, onClose }) {
         name: "avatar.jpg",
       });
       const { data } = await profileApi.uploadAvatar(formData);
-      setUser?.(data);
+      if (!data?.picture) throw new Error("The server did not return the new picture.");
+      applyPicture(data);
       showAlert({ type: "success", title: "Profile picture updated.", message: "" });
       handleClose();
     } catch (err) {
@@ -113,16 +139,19 @@ export default function AvatarStudio({ visible, onClose }) {
 
   // ── Preset tab — POST avatar-preset URL ──────────────────────────────────
   const savePreset = async () => {
-    if (!selected) return;
+    if (!selected || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     try {
       const { data } = await profileApi.setAvatarPreset(selected);
-      setUser?.(data);
+      if (!data?.picture) throw new Error("The server did not return the new picture.");
+      applyPicture(data);
       showAlert({ type: "success", title: "Avatar updated.", message: "" });
       handleClose();
     } catch (err) {
       showAlert({ type: "error", title: "Could not set avatar", message: extractApiError(err) });
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };

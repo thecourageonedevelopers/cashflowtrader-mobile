@@ -47,6 +47,7 @@ const MENU_ITEMS = [
   { icon: "calendar-outline",  label: "21-Day Challenge", route: TAB_ROUTES.CHALLENGE },
   { icon: "create-outline",    label: "Auto Journal",     route: TAB_ROUTES.JOURNAL   },
   { icon: "radio-outline",     label: "Live Sessions",    route: TAB_ROUTES.SESSIONS  },
+  { icon: "desktop-outline",   label: "Webinars",         route: TAB_ROUTES.WEBINARS  },
   { icon: "pulse-outline",     label: "Progress",         route: TAB_ROUTES.PROGRESS  },
   { icon: "headset-outline",   label: "Support",          route: TAB_ROUTES.SUPPORT   },
 ];

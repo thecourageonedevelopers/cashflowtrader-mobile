@@ -520,7 +520,7 @@ export default function TradeDetailScreen({ navigation, route }) {
 // Styles
 // ─────────────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#050505" },
+  root: { flex: 1, backgroundColor: "#000000" },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, gap: 16 },
 

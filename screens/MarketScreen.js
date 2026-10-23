@@ -558,7 +558,7 @@ export default function MarketScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: "#050505" },
+  scroll: { flex: 1, backgroundColor: "#000000" },
   content: { padding: 16, paddingBottom: 40 },
 
   chip: {

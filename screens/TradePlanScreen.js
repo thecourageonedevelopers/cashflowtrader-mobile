@@ -139,7 +139,7 @@ export default function TradePlanScreen({ navigation, route }) {
 
   if (!analysis) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#000000" }} edges={["top"]}>
         <View style={ts.headerBar}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -175,7 +175,7 @@ export default function TradePlanScreen({ navigation, route }) {
   const checklist = tp.checklist || [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#050505" }} edges={["top"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#000000" }} edges={["top"]}>
       <View style={ts.headerBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -292,7 +292,7 @@ export default function TradePlanScreen({ navigation, route }) {
 }
 
 const ts = StyleSheet.create({
-  loadingWrap: { flex: 1, backgroundColor: "#050505", alignItems: "center", justifyContent: "center" },
+  loadingWrap: { flex: 1, backgroundColor: "#000000", alignItems: "center", justifyContent: "center" },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",

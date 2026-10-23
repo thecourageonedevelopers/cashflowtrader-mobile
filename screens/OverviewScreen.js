@@ -34,6 +34,7 @@ import { challengeApi } from "../src/api/challenge";
 import { useAlert } from "../src/context/AlertContext";
 import { formatTimeSlot } from "../src/utils/tz";
 import ExpiryWarningBanner from "../components/challenge/ExpiryWarningBanner";
+import WebinarWidgets from "../components/webinars/WebinarWidgets";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -1018,6 +1019,9 @@ export default function OverviewScreen({ navigation }) {
             </View>
           )}
 
+          {/* WEBINARS — alerts, Live Now, Upcoming (web: ROW 5b; renders nothing while webinars are off) */}
+          <WebinarWidgets userId={user?.user_id} />
+
           {/* ══════════════════════════════════════════════════════════════
               ROW 5 — LIVE SUPPORT  (web: full-width, View not Link)
               Sessions with timing status (live/upcoming/ended) + join button
@@ -1231,14 +1235,14 @@ export default function OverviewScreen({ navigation }) {
 const styles = StyleSheet.create({
 
   // Loading
-  loadingContainer: { flex: 1, backgroundColor: "#050505", justifyContent: "center", alignItems: "center" },
+  loadingContainer: { flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center" },
   loadingLogo: { marginBottom: 20, shadowColor: "#39FF14", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.45, shadowRadius: 18, elevation: 8 },
   loadingLogoImg: { width: 56, height: 56, borderRadius: 14 },
   loadingBrand: { color: "#fff", fontSize: 22, fontFamily: DISPLAY.bold, marginBottom: 10 },
   loadingTagline: { color: "#555", fontSize: 13, fontFamily: BODY.regular, letterSpacing: 0.5 },
 
   // Scroll
-  container: { flex: 1, backgroundColor: "#050505" },
+  container: { flex: 1, backgroundColor: "#000000" },
   content: { padding: 16, paddingBottom: 48, gap: 16 },
 
   // ── Shared ────────────────────────────────────────────────────────────────

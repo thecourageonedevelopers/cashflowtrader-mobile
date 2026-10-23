@@ -5,6 +5,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import { useAuth } from "../../src/context/AuthContext";
 import { BODY } from "../../src/theme/typography";
+import { extractApiError } from "../../src/utils/apiError";
 
 // Required by expo-auth-session to complete the OAuth session on Android/web.
 WebBrowser.maybeCompleteAuthSession();
@@ -18,6 +19,22 @@ function GoogleIcon() {
       <Path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.3 4-4.1 5.2l6.1 5C40.4 35.6 43.5 30.2 43.5 24c0-1.2-.1-2.3-.3-3.5z" />
     </Svg>
   );
+}
+
+// User-facing message for a failed POST /auth/google. Never includes the token or raw server internals.
+function googleErrorMessage(e) {
+  const status = e?.response?.status;
+  if (e?.code === "RESPONSE_DECRYPTION_FAILED" || e?.name === "AuthSessionError") return extractApiError(e);
+  if (status === 403) return extractApiError(e); // e.g. "This account cannot sign in here."
+  // The backend rejects a Google token whose audience (OAuth client) it does not trust. That is a
+  // server-side configuration gap, not something the user can fix by retrying.
+  const detail = String(e?.response?.data?.detail || "");
+  if (/audience mismatch/i.test(detail)) {
+    return "Google sign-in isn't enabled for this version of the app yet. Please sign in with your email and password, or contact support.";
+  }
+  if (status === 401) return "Google rejected this sign-in or it has expired. Please try again.";
+  if (e?.message === "Network Error" || e?.code === "ECONNABORTED") return "No connection to the server. Please check your network and try again.";
+  return "Google sign-in failed. Please try again.";
 }
 
 export default function GoogleButton({ style }) {
@@ -37,11 +54,27 @@ export default function GoogleButton({ style }) {
   // browser session completes. We watch it in an effect because promptAsync()
   // is asynchronous and the hook updates `response` out-of-band.
   useEffect(() => {
-    if (response?.type !== "success") return;
+    if (!response) return;
 
-    const idToken = response.params?.id_token;
+    // Cancelled / dismissed by the user: nothing happened, nothing to report, no session created.
+    if (response.type === "cancel" || response.type === "dismiss" || response.type === "locked") return;
+
+    if (response.type === "error") {
+      // OAuth / code-exchange failure reported by Google. Log only the error code, never params.
+      console.error("[OAuth] Google returned an error:", response.error?.code ?? "unknown");
+      Alert.alert("Sign-in failed", "Google couldn't complete the sign-in. Please try again.");
+      return;
+    }
+    if (response.type !== "success") return;
+
+    const idToken = response.params?.id_token || response.authentication?.idToken;
     if (!idToken) {
-      console.error("[OAuth] id_token missing in response params:", response.params);
+      // The code exchange produced no ID token (misconfigured OAuth client or scheme).
+      console.error("[OAuth] success response without an id_token");
+      Alert.alert(
+        "Sign-in failed",
+        "Google sign-in didn't return the expected credentials. Please try again, or sign in with your email.",
+      );
       return;
     }
 
@@ -51,11 +84,8 @@ export default function GoogleButton({ style }) {
     googleLogin(idToken)
       .catch((e) => {
         if (!active) return;
-        console.error("[OAuth] POST /auth/google failed:", e?.message ?? String(e));
-        Alert.alert(
-          "Sign-in failed",
-          e?.response?.data?.detail || "Google sign-in failed. Please try again.",
-        );
+        console.error("[OAuth] POST /auth/google failed:", e?.response?.status ?? e?.code ?? e?.message);
+        Alert.alert("Sign-in failed", googleErrorMessage(e));
       })
       .finally(() => {
         if (active) setLoading(false);

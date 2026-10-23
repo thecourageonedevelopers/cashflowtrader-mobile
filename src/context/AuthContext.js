@@ -11,6 +11,7 @@ import { authApi } from "../api/auth";
 import client, { setUnauthorizedHandler } from "../api/client";
 import { queryClient } from "../api/queryClient";
 import { tokenService } from "../services/tokenService";
+import { assertSessionResponse, isWrongPortalError, mergeUser } from "../utils/authSession";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context
@@ -21,7 +22,10 @@ const AuthContext = createContext(null);
 // Provider
 // ─────────────────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(null);
+  // Public setter MERGES partial payloads into the current user (see mergeUser). Internal sign-out /
+  // session-restore paths below use the raw state setter.
+  const setUser = useCallback((u) => setUserState((prev) => mergeUser(prev, u)), []);
   // loading=true until the initial token check resolves — prevents auth-screen flash
   const [loading, setLoading] = useState(true);
   const logoutRef = useRef(null);
@@ -39,18 +43,26 @@ export function AuthProvider({ children }) {
   const checkAuthRaw = useCallback(async () => {
     const token = await tokenService.get();
     if (!token) {
-      setUser(null);
+      setUserState(null);
       return { resolved: null, definitive: true };
     }
     try {
       const { data } = await authApi.me();
-      const resolved = data.user ?? data;
-      setUser(resolved);
+      const resolved = data?.user ?? data;
+      if (!resolved || typeof resolved !== "object" || Array.isArray(resolved)) {
+        // Unreadable /auth/me payload (never a valid session) — treat like a transient failure.
+        return { resolved: null, definitive: false };
+      }
+      setUserState(resolved);
       return { resolved, definitive: true };
     } catch (err) {
-      const definitive = err?.response?.status === 401;
+      // A staff/admin token on the customer app is refused by the backend (403 wrong_portal): there is
+      // no session to restore here, and retrying would loop forever, so it is definitive too.
+      const wrongPortal = isWrongPortalError(err);
+      const definitive = err?.response?.status === 401 || wrongPortal;
       if (definitive) {
-        setUser(null);
+        if (wrongPortal) await tokenService.remove();
+        setUserState(null);
       }
       return { resolved: null, definitive };
     }
@@ -95,7 +107,7 @@ export function AuthProvider({ children }) {
     logoutRef.current = async () => {
       await tokenService.remove();
       queryClient.clear();
-      setUser(null);
+      setUserState(null);
     };
     setUnauthorizedHandler(() => logoutRef.current?.());
     return () => setUnauthorizedHandler(null);
@@ -104,25 +116,28 @@ export function AuthProvider({ children }) {
   // ── Auth actions ────────────────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
     const { data } = await authApi.login(email, password);
-    await tokenService.set(data.token);
-    setUser(data.user);
-    return data.user;
+    const session = assertSessionResponse(data);
+    await tokenService.set(session.token);
+    setUserState(session.user);
+    return session.user;
   }, []);
 
   const register = useCallback(async (name, email, password) => {
     const { data } = await authApi.register(name, email, password);
-    await tokenService.set(data.token);
-    setUser(data.user);
-    return data.user;
+    const session = assertSessionResponse(data);
+    await tokenService.set(session.token);
+    setUserState(session.user);
+    return session.user;
   }, []);
 
   // Mirrors web googleLoginThunk: POST /auth/google { credential } → store JWT → set user.
   // credential is the Google ID token received from expo-auth-session.
   const googleLogin = useCallback(async (credential) => {
     const { data } = await authApi.googleLogin(credential);
-    await tokenService.set(data.token);
-    setUser(data.user);
-    return data.user;
+    const session = assertSessionResponse(data);
+    await tokenService.set(session.token);
+    setUserState(session.user);
+    return session.user;
   }, []);
 
   const logout = useCallback(async () => {
@@ -131,7 +146,7 @@ export function AuthProvider({ children }) {
     try { await authApi.logout(); } catch {}
     await tokenService.remove();
     queryClient.clear();
-    setUser(null);
+    setUserState(null);
   }, []);
 
   // ── Derived flags ───────────────────────────────────────────────────────

@@ -27,8 +27,8 @@ const paperTheme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: "#22c55e",
-    background: "#050505",
+    primary: "#39FF14",
+    background: "#000000",
     surface: "#0a0a0a",
     onSurface: "#ffffff",
     onSurfaceVariant: "#aaaaaa",
@@ -60,7 +60,7 @@ export default function App() {
             <AuthProvider>
               <AlertProvider>
                 <NavLoadingProvider>
-                  <StatusBar style="light" backgroundColor="#050505" />
+                  <StatusBar style="light" backgroundColor="#000000" />
                   <RootNavigator />
                 </NavLoadingProvider>
               </AlertProvider>

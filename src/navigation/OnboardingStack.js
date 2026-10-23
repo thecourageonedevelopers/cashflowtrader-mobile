@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import OnboardingScreen from "../../screens/auth/OnboardingScreen";
 
 const Stack = createNativeStackNavigator();
-const DARK_BG = { backgroundColor: "#050505" };
+const DARK_BG = { backgroundColor: "#000000" };
 
 export default function OnboardingStack() {
   return (

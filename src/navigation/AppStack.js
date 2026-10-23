@@ -9,13 +9,14 @@ import TradePlanScreen from "../../screens/TradePlanScreen";
 import ChartAnalyzeScreen from "../../screens/ChartAnalyzeScreen";
 import CreatePasswordScreen from "../../screens/auth/CreatePasswordScreen";
 import ChangeContactScreen from "../../screens/ChangeContactScreen";
+import WebinarDetailScreen from "../../screens/WebinarDetailScreen";
 import { APP_ROUTES } from "../constants/routes";
 import { useNavLoading } from "../context/NavLoadingContext";
 
 // import AiCoachScreen from "../../screens/AiCoachScreen"; // TODO: build standalone AI coach
 
 const Stack = createNativeStackNavigator();
-const DARK_BG = { backgroundColor: "#050505" };
+const DARK_BG = { backgroundColor: "#000000" };
 
 export default function AppStack() {
   const { loading } = useNavLoading();
@@ -78,6 +79,13 @@ export default function AppStack() {
           name={APP_ROUTES.CHANGE_CONTACT}
           component={ChangeContactScreen}
           options={{ animation: "slide_from_bottom", presentation: "modal" }}
+        />
+
+        {/* Webinar detail — web equivalent: pages/dashboard/WebinarDetail.jsx */}
+        <Stack.Screen
+          name={APP_ROUTES.WEBINAR_DETAIL}
+          component={WebinarDetailScreen}
+          options={{ animation: "slide_from_right" }}
         />
       </Stack.Navigator>
 

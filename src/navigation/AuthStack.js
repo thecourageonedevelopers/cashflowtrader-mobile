@@ -12,7 +12,7 @@ import { AUTH_ROUTES } from "../constants/routes";
 // import AuthCallbackScreen from "../../screens/auth/AuthCallbackScreen";
 
 const Stack = createNativeStackNavigator();
-const DARK_BG = { backgroundColor: "#050505" };
+const DARK_BG = { backgroundColor: "#000000" };
 
 export default function AuthStack() {
   return (

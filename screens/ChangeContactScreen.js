@@ -198,7 +198,7 @@ export default function ChangeContactScreen({ navigation, route }) {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#050505" },
+  root: { flex: 1, backgroundColor: "#000000" },
   scroll: { padding: 20, paddingBottom: 40 },
 
   backRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 16 },

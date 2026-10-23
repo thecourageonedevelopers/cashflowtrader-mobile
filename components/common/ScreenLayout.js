@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   // ── Mobile / narrow web ───────────────────────────────────────────────────
   root: {
     flex: 1,
-    backgroundColor: "#050505",
+    backgroundColor: "#000000",
   },
 
   safeArea: {
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   webRoot: {
     flex: 1,
     flexDirection: "column",
-    backgroundColor: "#050505",
+    backgroundColor: "#000000",
   },
 
   webRow: {
@@ -273,6 +273,6 @@ const styles = StyleSheet.create({
 
   webMain: {
     flex: 1,
-    backgroundColor: "#050505",
+    backgroundColor: "#000000",
   },
 });

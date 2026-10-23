@@ -11,10 +11,10 @@ const NAV_THEME = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: "#050505",
+    background: "#000000",
     card:       "#0a0a0a",
-    border:     "#1b1b1b",
-    primary:    "#22c55e",
+    border:     "rgba(255,255,255,0.1)",
+    primary:    "#39FF14",
   },
 };
 
@@ -29,7 +29,7 @@ export default function RootNavigator() {
   if (loading) {
     return (
       <View style={styles.splash}>
-        <ActivityIndicator size="large" color="#22c55e" />
+        <ActivityIndicator size="large" color="#39FF14" />
       </View>
     );
   }
@@ -48,7 +48,7 @@ export default function RootNavigator() {
 const styles = StyleSheet.create({
   splash: {
     flex: 1,
-    backgroundColor: "#050505",
+    backgroundColor: "#000000",
     justifyContent: "center",
     alignItems: "center",
   },

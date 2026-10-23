@@ -10,15 +10,15 @@ const navTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: "#050505",
+    background: "#000000",
     card: "#0a0a0a",
-    border: "#1b1b1b",
-    primary: "#22c55e",
+    border: "rgba(255,255,255,0.1)",
+    primary: "#39FF14",
   },
 };
 
 const Stack = createNativeStackNavigator();
-const DARK_BG = { backgroundColor: "#050505" };
+const DARK_BG = { backgroundColor: "#000000" };
 
 export default function AppNavigator() {
   return (

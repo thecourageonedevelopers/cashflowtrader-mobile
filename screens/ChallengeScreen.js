@@ -1528,7 +1528,7 @@ const GLASS_BORDER = "#1c1c1c";
 const HIGHLIGHT   = "rgba(255,255,255,0.08)";
 
 const styles = StyleSheet.create({
-  scroll:      { flex: 1, backgroundColor: "#050505" },
+  scroll:      { flex: 1, backgroundColor: "#000000" },
   content:     { padding: 18, paddingBottom: 48, gap: 16 },
   loadingBox:  { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { color: "rgba(255,255,255,0.60)", fontFamily: MONO.regular, fontSize: 11, letterSpacing: 3 },
@@ -1628,7 +1628,7 @@ const styles = StyleSheet.create({
 
   // Day number box
   dayNumBox:     { width: 58, height: 58, borderRadius: 10, borderWidth: 1, borderColor: "#262626", justifyContent: "center", alignItems: "center", backgroundColor: "#0d0d0d", flexShrink: 0 },
-  milestoneBadge:{ position: "absolute", top: -8, right: -8, backgroundColor: "#050505", borderRadius: 10, padding: 1, shadowColor: AMBER, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.60, shadowRadius: 4 },
+  milestoneBadge:{ position: "absolute", top: -8, right: -8, backgroundColor: "#000000", borderRadius: 10, padding: 1, shadowColor: AMBER, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.60, shadowRadius: 4 },
   dayLabel:      { color: "#8a8a8a", fontFamily: MONO.regular, fontSize: 9, letterSpacing: 2, marginBottom: 2 },
   dayNum:        { color: "#fff", fontFamily: MONO.bold, fontSize: 20, lineHeight: 24 },
 
