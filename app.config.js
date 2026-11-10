@@ -2,7 +2,7 @@
 // Read environment variables via process.env.EXPO_PUBLIC_* at build time.
 export default {
   expo: {
-    name: "cashflowtrader",
+    name: "Cashflow Trader", // launcher label; the slug below must stay "cashflowtrader" (EAS project key)
     slug: "cashflowtrader",
     version: "1.0.0",
     orientation: "portrait",

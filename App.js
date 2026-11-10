@@ -15,7 +15,7 @@ import {
   JetBrainsMono_500Medium,
   JetBrainsMono_700Bold,
 } from "@expo-google-fonts/jetbrains-mono";
-import { CABINET_GROTESK_FONTS } from "./src/theme/typography";
+import { CABINET_GROTESK_FONTS, BADGE_FONTS } from "./src/theme/typography";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./src/api/queryClient";
 import { AuthProvider } from "./src/context/AuthContext";
@@ -39,6 +39,7 @@ const paperTheme = {
 export default function App() {
   const [fontsLoaded] = useFonts({
     ...CABINET_GROTESK_FONTS,
+    ...BADGE_FONTS,
     Outfit_300Light,
     Outfit_400Regular,
     Outfit_500Medium,

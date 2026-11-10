@@ -1,4 +1,5 @@
 import client from "./client";
+import { buildOrderBody } from "../utils/consent";
 
 // program_id defaults to the legacy 21-Day Challenge everywhere it's optional, matching web's
 // useParams() default (`const { programId = "21-day-challenge" } = useParams()`, Challenge.jsx /
@@ -55,8 +56,10 @@ export const challengeApi = {
   getMuxToken: (muxPlaybackId) => client.get(`/challenge/mux-token/${muxPlaybackId}`),
 
   // ── Payment: legacy Challenge — create/verify Razorpay order ────────────────
-  // req (createOrder): { coupon_code? } — optional, mirrors web payment.createChallengeOrder
-  createOrder: (couponCode) => client.post("/payments/create-order", couponCode ? { coupon_code: couponCode } : undefined),
+  // req (createOrder): { terms_accepted: "true", coupon_code? } — mirrors web payment.createChallengeOrder. The backend
+  // refuses an order without terms_accepted, and buildOrderBody throws if consent was not given, so no order is
+  // ever requested for a buyer who has not accepted the Terms & Conditions.
+  createOrder: (couponCode, termsAccepted) => client.post("/payments/create-order", buildOrderBody({ termsAccepted, couponCode })),
 
   verifyPayment: (razorpay_order_id, razorpay_payment_id, razorpay_signature) =>
     client.post("/payments/verify", {
@@ -72,8 +75,8 @@ export const challengeApi = {
   validateCoupon: (code) => client.get("/payments/coupons/validate", { params: { code } }),
 
   // ── Payment: any other program — create/verify Razorpay order ──────────────
-  createProgramOrder: (programId, couponCode) =>
-    client.post(`/payments/program/${programId}/order`, couponCode ? { coupon_code: couponCode } : undefined),
+  createProgramOrder: (programId, couponCode, termsAccepted) =>
+    client.post(`/payments/program/${programId}/order`, buildOrderBody({ termsAccepted, couponCode })),
 
   verifyProgramOrder: (programId, razorpay_order_id, razorpay_payment_id, razorpay_signature) =>
     client.post(`/payments/program/${programId}/verify`, {

@@ -20,6 +20,7 @@ export const APP_ROUTES = {
   CREATE_PASSWORD: "CreatePassword",
   CHANGE_CONTACT: "ChangeContact",
   WEBINAR_DETAIL: "WebinarDetail",
+  LEGAL: "Legal", // Terms & Conditions etc. — same screen the auth stack uses (screens/LegalScreen.js)
 };
 
 // Bottom tab screen names (match existing AppTabs.js)

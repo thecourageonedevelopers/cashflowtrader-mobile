@@ -10,6 +10,7 @@ import ChartAnalyzeScreen from "../../screens/ChartAnalyzeScreen";
 import CreatePasswordScreen from "../../screens/auth/CreatePasswordScreen";
 import ChangeContactScreen from "../../screens/ChangeContactScreen";
 import WebinarDetailScreen from "../../screens/WebinarDetailScreen";
+import LegalScreen from "../../screens/LegalScreen";
 import { APP_ROUTES } from "../constants/routes";
 import { useNavLoading } from "../context/NavLoadingContext";
 
@@ -85,6 +86,13 @@ export default function AppStack() {
         <Stack.Screen
           name={APP_ROUTES.WEBINAR_DETAIL}
           component={WebinarDetailScreen}
+          options={{ animation: "slide_from_right" }}
+        />
+
+        {/* Terms & Conditions — opened from the consent checkbox on the challenge landing / program unlock */}
+        <Stack.Screen
+          name={APP_ROUTES.LEGAL}
+          component={LegalScreen}
           options={{ animation: "slide_from_right" }}
         />
       </Stack.Navigator>

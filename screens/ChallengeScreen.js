@@ -229,7 +229,7 @@ export default function ChallengeScreen({ navigation, route }) {
     // generic unlock/checkout screen instead — matches web's GenericProgramUnlock exactly.
     if (isLegacyChallenge) {
       return (
-        <ScreenLayout screenName={screenIdentity} navigation={navigation}>
+        <ScreenLayout screenName={screenIdentity} navigation={navigation} headerVariant="landing">
           <ChallengeLanding
             data={data}
             onPurchased={async () => { await checkAuth(); await refetch(); }}

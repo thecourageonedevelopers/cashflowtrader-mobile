@@ -284,6 +284,7 @@ export default function SignUpScreen({ navigation }) {
                 onPress={handleSignUp}
                 loading={loading}
                 disabled={loading}
+                loadingLabel="Creating account…"
                 style={{ marginTop: 18 }}
               >
                 Create Account →

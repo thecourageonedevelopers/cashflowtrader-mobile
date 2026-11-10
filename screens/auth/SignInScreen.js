@@ -120,7 +120,7 @@ export default function SignInScreen({ navigation }) {
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
 
-              <PrimaryButton onPress={handleSignIn} loading={loading} disabled={loading}>
+              <PrimaryButton onPress={handleSignIn} loading={loading} disabled={loading} loadingLabel="Signing in…">
                 Sign In →
               </PrimaryButton>
 

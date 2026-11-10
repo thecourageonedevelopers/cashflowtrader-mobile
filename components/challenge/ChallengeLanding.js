@@ -1,15 +1,20 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, Image, ActivityIndicator, Modal, TextInput,
+  useWindowDimensions,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import RazorpayCheckout from "react-native-razorpay";
 import { PRIMARY } from "../auth/AuthStyles";
-import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
+import { DISPLAY, MONO, BODY, BADGE } from "../../src/theme/typography";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useAlert } from "../../src/context/AlertContext";
 import { challengeApi } from "../../src/api/challenge";
+import { APP_ROUTES } from "../../src/constants/routes";
+import { hasAccepted } from "../../src/utils/consent";
+import ConsentCheckbox from "../legal/ConsentCheckbox";
 import {
   VSL_VIDEO_URL, VSL_BASE_URL, muxPlaybackId, buildVslHtml, parseVslMessage, vslErrorMessage,
 } from "../../src/utils/vsl";
@@ -19,11 +24,12 @@ import {
 
 const VSL_POSTER = require("../../assets/vsl-poster.png");
 
+// Same four cards, in the same order, as web ChallengeLanding.jsx (lucide Crosshair / ShieldCheck / Smile / TrendingUp).
 const BENEFITS = [
-  { icon: "stats-chart-outline",      a: "Monthly",       b: "Income"    },
-  { icon: "shield-checkmark-outline", a: "Confident",     b: "Decisions" },
-  { icon: "happy-outline",            a: "Less Stress",   b: "Trading"   },
-  { icon: "aperture-outline",         a: "Proven Daily",  b: "Process"   },
+  { icon: "locate-outline",           a: "Clear",       b: "Strategy"     },
+  { icon: "shield-checkmark-outline", a: "Consistent",  b: "Results"      },
+  { icon: "happy-outline",            a: "Less Stress", b: "More Freedom" },
+  { icon: "trending-up-outline",      a: "Steady",      b: "Income"       },
 ];
 
 // VSL player — the portal plays this video with <mux-player playback-id="..."> (VslContent.jsx). RN cannot
@@ -128,7 +134,16 @@ function VslPoster({ onPress }) {
 export default function ChallengeLanding({ data, onPurchased }) {
   const { user, checkAuth } = useAuth();
   const { showAlert } = useAlert();
+  const navigation = useNavigation();
+  const { width } = useWindowDimensions();
   const [busy, setBusy] = useState(false);
+  // Terms & Conditions consent — never pre-checked, never bypassed (see handleUnlock and challengeApi.createOrder).
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [consentAttempt, setConsentAttempt] = useState(0); // bumped when "Join" is tapped without consent → the warning shakes
+  const openTerms = () => navigation.navigate(APP_ROUTES.LEGAL, { slug: "terms" });
+  // web: headline text-[6.4vw], sub-headline text-[4vw] below the sm breakpoint (kept on one line)
+  const h1Size = Math.min(Math.round(width * 0.064), 44);
+  const pSize = Math.min(Math.round(width * 0.04), 28);
   // Synchronous re-entry guard: state updates are async, so two quick taps could both pass `disabled={busy}`
   // and create two Razorpay orders.
   const inFlight = useRef(false);
@@ -191,10 +206,15 @@ export default function ChallengeLanding({ data, onPurchased }) {
   // Payment / unlock — mirrors web Challenge.jsx handleBuy with react-native-razorpay
   const handleUnlock = async () => {
     if (inFlight.current) return;
+    // Mandatory consent: without it nothing proceeds (the warning under the button is already showing; make it shake).
+    if (!hasAccepted(agreedToTerms)) {
+      setConsentAttempt((n) => n + 1);
+      return;
+    }
     inFlight.current = true;
     setBusy(true);
     try {
-      const order = await challengeApi.createOrder(appliedCoupon?.code).then((r) => r.data);
+      const order = await challengeApi.createOrder(appliedCoupon?.code, agreedToTerms).then((r) => r.data);
 
       // Mock mode (test/dev environment) — skip checkout, verify directly
       if (order.mock) {
@@ -278,6 +298,7 @@ export default function ChallengeLanding({ data, onPurchased }) {
       style={styles.scroll}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       {/* Badge — "21-Day Trading Transformation" with pulsing neon dot */}
       <View style={styles.badgeWrap}>
@@ -285,57 +306,84 @@ export default function ChallengeLanding({ data, onPurchased }) {
         <Text style={styles.badgeText}>21-Day Trading Transformation</Text>
       </View>
 
-      {/* Hero h1 — matches web text-[6.4vw] sm:text-6xl */}
-      <Text style={styles.heroH1}>
+      {/* Hero headline — web: centred, text-[6.4vw], font-black, one line */}
+      <Text
+        style={[styles.heroH1, { fontSize: h1Size, lineHeight: Math.round(h1Size * 1.0), letterSpacing: -0.035 * h1Size }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
         {"To Become A "}
         <Text style={styles.neonText}>Profitable Trader</Text>
       </Text>
 
-      {/* Hero p — matches web text-[4vw] sm:text-4xl */}
-      <Text style={styles.heroP}>
+      {/* Sub-headline — web: text-[4vw], font-black, one line */}
+      <Text
+        style={[styles.heroP, { fontSize: pSize, lineHeight: Math.round(pSize * 1.05), letterSpacing: -0.025 * pSize }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
         {"Take Action Now – "}
         <Text style={styles.neonText}>Start Your 21 Days Challenge</Text>
       </Text>
 
-      {/* Sub headline */}
+      {/* Supporting sub-headline */}
       <Text style={styles.heroSub}>
-        Build more confidence. Trade with more clarity. Create consistent monthly income.
+        21 days to more confidence, clarity, and consistent monthly income from the markets.
       </Text>
 
-      {/* Benefits — 4 columns in one row (matches web grid-cols-4 gap-2) */}
+      {/* Benefits — 4 columns in one row (web grid-cols-4 gap-2) */}
       <View style={styles.benefitsGrid}>
-        {BENEFITS.map(({ icon, a, b }, i) => (
-          <View key={i} style={styles.benefitCard}>
-            <Ionicons name={icon} size={22} color={PRIMARY} />
-            <Text style={styles.benefitText}>{a}{"\n"}{b}</Text>
+        {BENEFITS.map(({ icon, a: la, b: lb }, i) => (
+          <View key={i} style={styles.benefitCard} testID={`benefit-${i}`}>
+            <Ionicons name={icon} size={28} color={PRIMARY} />
+            <Text style={styles.benefitText}>{la}{"\n"}{lb}</Text>
           </View>
         ))}
       </View>
 
       {/* VSL thumbnail — portal ChallengeLanding.jsx: aspect-video box, neon border, black bg, poster
-          object-contain object-center, gradient scrim; the play ring is part of the poster artwork
-          itself, so no extra play button is drawn on top. Tap → watchVsl. */}
+          object-contain object-center; the play ring is part of the poster artwork itself. Tap → watchVsl. */}
       <VslPoster onPress={watchVsl} />
 
       <Modal visible={playingVsl} animationType="fade" onRequestClose={() => setPlayingVsl(false)} supportedOrientations={["portrait", "landscape"]}>
         <VslPlayer onClose={() => setPlayingVsl(false)} />
       </Modal>
 
-      {/* Primary CTA — "Watch The 4-Minute Introduction" */}
-      <TouchableOpacity onPress={watchVsl} style={styles.primaryCta} activeOpacity={0.9}>
-        <View style={styles.playIconCircle}>
-          <Ionicons name="play" size={16} color={PRIMARY} style={{ marginLeft: 2 }} />
+      {/* Primary CTA — the page's payment trigger (web: "Join 21 Days Challenge" + trophy). Stays tappable while
+          consent is missing so the tap can explain itself (the warning below shakes); it just never proceeds. */}
+      <TouchableOpacity
+        onPress={handleUnlock}
+        disabled={busy}
+        style={[styles.joinCta, busy && { opacity: 0.6 }]}
+        activeOpacity={0.9}
+        accessibilityRole="button"
+        accessibilityLabel="Join 21 Days Challenge"
+        accessibilityState={{ disabled: busy, busy }}
+        testID="join-challenge-cta"
+      >
+        <View style={styles.trophyCircle}>
+          {busy ? <ActivityIndicator size="small" color={PRIMARY} /> : <Ionicons name="trophy-outline" size={22} color={PRIMARY} />}
         </View>
-        <Text style={styles.primaryCtaText}>Watch The 4-Minute Introduction</Text>
+        <View style={styles.joinTextCol}>
+          <Text style={styles.joinTitle}>{busy ? "Processing…" : "Join 21 Days Challenge"}</Text>
+          {!busy && <Text style={styles.joinSub}>Transform Your Trading. Transform Your Life.</Text>}
+        </View>
       </TouchableOpacity>
 
-      {/* Lock microcopy */}
-      <View style={styles.microcopyRow}>
-        <Ionicons name="lock-closed" size={15} color={`${PRIMARY}cc`} />
-        <Text style={styles.microcopyText}>Unlock Day One After Watching</Text>
+      {/* Mandatory Terms & Conditions consent (unchecked by default; warning while unchecked) */}
+      <View style={styles.consentWrap}>
+        <ConsentCheckbox
+          checked={agreedToTerms}
+          onChange={setAgreedToTerms}
+          onOpenTerms={openTerms}
+          attempt={consentAttempt}
+          testID="landing-consent"
+        />
       </View>
 
-      {/* Price + coupon — mirrors web Checkout.jsx's checkout-card */}
+      {/* Price + coupon — mirrors web Checkout.jsx's checkout-card (mobile keeps showing the price before payment) */}
       {price?.amount != null && (
         <View style={styles.priceCard}>
           <Text style={styles.priceLabel}>{appliedCoupon ? "You Pay" : "Price"}</Text>
@@ -397,19 +445,6 @@ export default function ChallengeLanding({ data, onPurchased }) {
           </View>
         </View>
       )}
-
-      {/* Footer CTA — payment unlock */}
-      <TouchableOpacity
-        onPress={handleUnlock}
-        disabled={busy}
-        style={styles.footerCta}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="lock-closed-outline" size={14} color="rgba(255,255,255,0.45)" />
-        <Text style={styles.footerCtaText}>
-          {busy ? "Processing…" : "Your transformation starts with one decision."}
-        </Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -417,8 +452,8 @@ export default function ChallengeLanding({ data, onPurchased }) {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: "#000000" },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingHorizontal: 12, // web: px-3
+    paddingTop: 4,
     paddingBottom: 56,
     alignItems: "stretch",
   },
@@ -454,28 +489,27 @@ const styles = StyleSheet.create({
   // Hero H1 — web: text-[6.4vw]=24px@375px, leading-[0.95]=22.8px, tracking-[-0.035em]
   heroH1: {
     fontFamily: DISPLAY.extraBold,
-    fontSize: 22,
-    lineHeight: 26,
-    letterSpacing: -0.8,
     color: "#fff",
+    textAlign: "center",
+    marginTop: 0,
     marginBottom: 4,
   },
   // Hero P — web: text-[4vw]=15px@375px, leading-[0.98]=14.7px, tracking-[-0.025em]
   heroP: {
     fontFamily: DISPLAY.extraBold,
-    fontSize: 15,
-    lineHeight: 18,
-    letterSpacing: -0.4,
     color: "#fff",
+    textAlign: "center",
     marginBottom: 12,
   },
   neonText: { color: "#39FF14" },
   // Sub — web: text-[12.5px], leading-snug, mt-3=12px above, mt-7=28px below
   heroSub: {
+    alignSelf: "center",
+    maxWidth: 304, // web: max-w-[19rem]
     color: "rgba(255,255,255,0.50)",
     fontFamily: BODY.regular,
     fontSize: 12.5,
-    lineHeight: 18,
+    lineHeight: 17,
     textAlign: "center",
     marginBottom: 28,
   },
@@ -483,32 +517,34 @@ const styles = StyleSheet.create({
   // Benefits grid — web: grid-cols-4 gap-2 (4 cards in ONE row), mt-7=28px below
   benefitsGrid: {
     flexDirection: "row",
-    gap: 6,
+    gap: 8,
     marginBottom: 28,
   },
   // Each card: flex:1 so 4 fill the row equally; web py-4=16px px-1=4px rounded-2xl
   benefitCard: {
     flex: 1,
     alignItems: "center",
-    gap: 8,
-    borderRadius: 12,
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 16, // web: rounded-2xl
     borderWidth: 1,
     borderColor: "rgba(57,255,20,0.35)",
     backgroundColor: "rgba(57,255,20,0.04)",
-    paddingVertical: 14,
-    paddingHorizontal: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 2,
     shadowColor: "#39FF14",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.10,
     shadowRadius: 8,
   },
   // web: text-[10.5px] leading-tight font-bold
+  // web: font-display font-bold text-[10.5px] leading-tight (Cabinet Grotesk, not mono)
   benefitText: {
     color: "#fff",
-    fontFamily: MONO.regular,
-    fontSize: 10,
+    fontFamily: DISPLAY.bold,
+    fontSize: 10.5,
     textAlign: "center",
-    lineHeight: 14,
+    lineHeight: 13,
   },
 
   // VSL thumbnail — web: mt-7=28px above, rounded-2xl; mt-6=24px below.
@@ -682,64 +718,51 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
-  // Primary CTA — web: py-5=20px, text-base=16px, rounded-2xl, gap-2.5=10px, mt-4=16px below
-  primaryCta: {
+  // Primary CTA — web: w-full mt-6 px-4 py-4 rounded-2xl bg-neon, trophy in a black w-11 circle, Anton title + subtitle
+  joinCta: {
     width: "100%",
     backgroundColor: "#39FF14",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    paddingVertical: 20,
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     borderRadius: 16,
+    marginBottom: 16,
     shadowColor: "#39FF14",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
-    marginBottom: 16,
+    shadowOpacity: 0.6,
+    shadowRadius: 18,
+    elevation: 8,
   },
-  // web: w-9 h-9 = 36px circle
-  playIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  trophyCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
   },
-  // web: text-base=16px font-black
-  primaryCtaText: {
+  joinTextCol: { flexShrink: 1, alignItems: "flex-start" },
+  // web: font-badge text-2xl uppercase (Anton)
+  joinTitle: {
     color: "#000",
-    fontFamily: DISPLAY.bold,
-    fontSize: 16,
-    letterSpacing: 0.1,
+    fontFamily: BADGE.regular,
+    fontSize: 24,
+    lineHeight: 28,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  // web: font-badge text-xs tracking-wide text-black/70 uppercase
+  joinSub: {
+    color: "rgba(0,0,0,0.7)",
+    fontFamily: BADGE.regular,
+    fontSize: 11.5,
+    lineHeight: 15,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
 
-  // Lock microcopy — web: text-base=16px, mt-4=16px above, mt-7=28px below
-  microcopyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    justifyContent: "center",
-    marginBottom: 28,
-  },
-  microcopyText: {
-    color: "rgba(255,255,255,0.60)",
-    fontFamily: BODY.regular,
-    fontSize: 15,
-  },
-
-  // Footer CTA — web: text-sm=14px, gap-2=8px
-  footerCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    justifyContent: "center",
-    paddingVertical: 8,
-  },
-  footerCtaText: {
-    color: "rgba(255,255,255,0.45)",
-    fontFamily: BODY.regular,
-    fontSize: 14,
-  },
+  consentWrap: { alignItems: "center", marginBottom: 24 },
 });

@@ -7,21 +7,30 @@
  * copy ("21 days that decide your future", etc.) is specific to the Challenge and would be actively
  * misleading for a Mentorship Program or any future course.
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import RazorpayCheckout from "react-native-razorpay";
 import { PRIMARY } from "../auth/AuthStyles";
 import { DISPLAY, MONO, BODY } from "../../src/theme/typography";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useAlert } from "../../src/context/AlertContext";
 import { challengeApi } from "../../src/api/challenge";
+import { APP_ROUTES } from "../../src/constants/routes";
+import { hasAccepted } from "../../src/utils/consent";
+import ConsentCheckbox from "../legal/ConsentCheckbox";
 
 export default function GenericProgramUnlock({ data, programId, onPurchased }) {
   const { user, checkAuth } = useAuth();
   const { showAlert } = useAlert();
+  const navigation = useNavigation();
   const [price, setPrice] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Terms & Conditions consent — mandatory, never pre-checked (the backend refuses an order without it).
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [consentAttempt, setConsentAttempt] = useState(0);
+  const inFlight = useRef(false); // two quick taps must not create two orders
 
   useEffect(() => {
     let active = true;
@@ -33,9 +42,15 @@ export default function GenericProgramUnlock({ data, programId, onPurchased }) {
   const rupees = price?.amount_paise != null ? Math.round(price.amount_paise / 100) : null;
 
   const handleBuy = async () => {
+    if (inFlight.current) return;
+    if (!hasAccepted(agreedToTerms)) {
+      setConsentAttempt((n) => n + 1);
+      return;
+    }
+    inFlight.current = true;
     setBusy(true);
     try {
-      const order = await challengeApi.createProgramOrder(programId).then((r) => r.data);
+      const order = await challengeApi.createProgramOrder(programId, undefined, agreedToTerms).then((r) => r.data);
 
       if (order.mock) {
         await challengeApi.verifyProgramOrder(programId, order.order_id, `pay_mock_${Date.now()}`, "mock_signature");
@@ -84,6 +99,7 @@ export default function GenericProgramUnlock({ data, programId, onPurchased }) {
         message: e?.response?.data?.detail || e?.description || "Could not start payment",
       });
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -108,6 +124,15 @@ export default function GenericProgramUnlock({ data, programId, onPurchased }) {
             </Text>
           )}
         </TouchableOpacity>
+        <View style={s.consent}>
+          <ConsentCheckbox
+            checked={agreedToTerms}
+            onChange={setAgreedToTerms}
+            onOpenTerms={() => navigation.navigate(APP_ROUTES.LEGAL, { slug: "terms" })}
+            attempt={consentAttempt}
+            testID="program-consent"
+          />
+        </View>
       </View>
     </View>
   );
@@ -157,6 +182,7 @@ const s = StyleSheet.create({
     marginTop: 24,
   },
   buyBtnDisabled: { opacity: 0.5 },
+  consent: { width: "100%", marginTop: 18 },
   buyBtnText: {
     color: "#000",
     fontFamily: DISPLAY.bold,

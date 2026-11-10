@@ -59,3 +59,10 @@ export const CABINET_GROTESK_FONTS = {
   "CabinetGrotesk-Bold":      require("../../assets/fonts/CabinetGrotesk-Bold.ttf"),
   "CabinetGrotesk-ExtraBold": require("../../assets/fonts/CabinetGrotesk-ExtraBold.ttf"),
 };
+
+// ── Anton (OFL, Google Fonts) ──────────────────────────────────────────────────
+// CSS: .font-badge { font-family: "Anton", "Cabinet Grotesk", sans-serif; letter-spacing: 0.01em; }
+// Used by the web's "Join 21 Days Challenge" call to action. Bundled as a local asset (assets/fonts/Anton-Regular.ttf),
+// like Cabinet Grotesk, so no extra package is needed.
+export const BADGE = { regular: "Anton-Regular" };
+export const BADGE_FONTS = { "Anton-Regular": require("../../assets/fonts/Anton-Regular.ttf") };

@@ -23,7 +23,7 @@ const DRAWER_WIDTH = 300;
 // sidebar still leaves 468 px of usable content area.
 const SIDEBAR_BREAKPOINT = 768;
 
-export default function ScreenLayout({ children, screenName, navigation }) {
+export default function ScreenLayout({ children, screenName, navigation, headerVariant }) {
   // useWindowDimensions re-renders this component whenever the window is
   // resized, so isDesktop reacts to the browser's responsive-mode toggle.
   const { width } = useWindowDimensions();
@@ -194,7 +194,7 @@ export default function ScreenLayout({ children, screenName, navigation }) {
     <View style={styles.root}>
       <SafeAreaView style={styles.safeArea}>
         {challengeMaintenance && <ChallengeMaintenanceBanner reason={challengeMaintenance.reason} />}
-        <AppHeader onMenuPress={openDrawer} />
+        <AppHeader onMenuPress={openDrawer} variant={headerVariant} />
         <View style={styles.content}>{children}</View>
       </SafeAreaView>
 
